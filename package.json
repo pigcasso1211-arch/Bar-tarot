@@ -1,0 +1,32 @@
+{
+  "name": "bar-tarot",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.7.0",
+  "type": "module",
+  "scripts": {
+    "dev": "PATH=/Users/zhengduruo/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PATH concurrently \"tsx watch server/index.ts\" \"vite --host 127.0.0.1\"",
+    "dev:client": "PATH=/Users/zhengduruo/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PATH vite --host 127.0.0.1",
+    "dev:server": "PATH=/Users/zhengduruo/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PATH tsx watch server/index.ts",
+    "build": "PATH=/Users/zhengduruo/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PATH tsc && PATH=/Users/zhengduruo/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PATH vite build",
+    "preview": "PATH=/Users/zhengduruo/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PATH vite preview --host 127.0.0.1",
+    "start": "PATH=/Users/zhengduruo/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PATH NODE_ENV=production tsx server/index.ts"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.2",
+    "express": "^4.21.2",
+    "lucide-react": "^0.468.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.5",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.10.2",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2"
+  }
+}
