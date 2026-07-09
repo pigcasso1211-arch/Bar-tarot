@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { ExternalLink, MapPin, RefreshCw, Sparkles, Shuffle, Star } from "lucide-react";
+import { ExternalLink, MapPin, RefreshCw, Sparkles, Shuffle, Star, Wine } from "lucide-react";
 import type { RecommendResponse, PlaceRecommendation } from "../shared/places";
+import { buildBarReading } from "../shared/reading";
 import type { TarotCard } from "../shared/tarot";
 import "./styles.css";
 
@@ -13,6 +14,7 @@ function App() {
   const [result, setResult] = useState<RecommendResponse | null>(null);
   const [state, setState] = useState<DrawState>("idle");
   const [error, setError] = useState("");
+  const resultRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     fetch("/api/tarot-cards")
@@ -20,6 +22,12 @@ function App() {
       .then((data) => setCards(data.cards ?? []))
       .catch(() => setCards([]));
   }, []);
+
+  useEffect(() => {
+    if (state === "revealed" && resultRef.current) {
+      resultRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [state, result]);
 
   const currentCard = useMemo(() => {
     if (result?.card) return result.card;
@@ -71,13 +79,22 @@ function App() {
           <p className="eyebrow">Singapore Night Tarot</p>
           <h1>今晚抽一间酒吧</h1>
           <p className="lede">让塔罗牌先决定氛围，再从新加坡的夜色里挑一家适合今晚的 bar。</p>
+          {cards.length > 0 ? <p className="deck-count">{cards.length} 张大阿尔卡纳 · 每晚不重样</p> : null}
         </div>
 
         <div className={`tarot-stage ${state === "drawing" ? "is-drawing" : ""} ${result ? "is-revealed" : ""}`}>
           <button className="card-button" type="button" onClick={() => redraw()} disabled={state === "drawing"}>
             <div className="card-face card-back">
-              <Sparkles size={30} />
-              <span>Draw</span>
+              <div className="card-back-frame" aria-hidden="true">
+                <span className="card-back-corner tl" />
+                <span className="card-back-corner tr" />
+                <span className="card-back-corner bl" />
+                <span className="card-back-corner br" />
+                <span className="card-back-emblem">
+                  <Sparkles size={28} />
+                </span>
+              </div>
+              <span className="card-back-label">Draw</span>
             </div>
             <div
               className="card-face card-front"
@@ -87,6 +104,10 @@ function App() {
                   : undefined
               }
             >
+              <span className="card-corner tl" aria-hidden="true" />
+              <span className="card-corner tr" aria-hidden="true" />
+              <span className="card-corner bl" aria-hidden="true" />
+              <span className="card-corner br" aria-hidden="true" />
               <small>{currentCard?.arcana ?? "?"}</small>
               <TarotIllustration cardId={currentCard?.id} />
               <strong>{currentCard?.name ?? "Tarot"}</strong>
@@ -106,7 +127,7 @@ function App() {
       {error ? <p className="error-banner">{error}</p> : null}
 
       {result ? (
-        <section className="result-layout" aria-live="polite">
+        <section className="result-layout" ref={resultRef} aria-live="polite">
           <article className="reading-panel">
             <p className="eyebrow">{result.card.name}</p>
             <h2>{result.card.title}</h2>
@@ -115,7 +136,7 @@ function App() {
             {result.notice ? <span className="notice">{result.notice}</span> : null}
           </article>
 
-          <PlacePanel place={result.place} featured />
+          <PlacePanel place={result.place} card={result.card} featured />
 
           <section className="alternatives" aria-label="备选酒吧">
             <div className="section-heading">
@@ -126,7 +147,9 @@ function App() {
               {result.alternatives.map((place) => (
                 <button key={place.id} className="alternative-item" type="button" onClick={() => chooseAlternative(place)}>
                   <span>{place.name}</span>
-                  <small>{place.statusLabel}</small>
+                  <small>
+                    {place.rating ? `${place.rating.toFixed(1)} ★` : "—"} · {place.statusLabel}
+                  </small>
                 </button>
               ))}
             </div>
@@ -147,36 +170,46 @@ function App() {
 }
 
 function TarotIllustration({ cardId }: { cardId?: string }) {
+  const uid = cardId ?? "default";
   return (
     <svg className="tarot-art" viewBox="0 0 180 220" role="img" aria-label={cardId ?? "tarot illustration"}>
       <defs>
-        <radialGradient id="halo" cx="50%" cy="34%" r="52%">
+        <radialGradient id={`halo-${uid}`} cx="50%" cy="34%" r="52%">
           <stop offset="0%" stopColor="#fff6c7" />
           <stop offset="100%" stopColor="#e6c76f" stopOpacity="0" />
         </radialGradient>
-        <linearGradient id="robe" x1="0%" x2="100%" y1="0%" y2="100%">
+        <linearGradient id={`robe-${uid}`} x1="0%" x2="100%" y1="0%" y2="100%">
           <stop offset="0%" stopColor="#f8f4e8" />
           <stop offset="100%" stopColor="#d9a441" />
         </linearGradient>
+        <linearGradient id={`sky-${uid}`} x1="0%" x2="0%" y1="0%" y2="100%">
+          <stop offset="0%" stopColor="color-mix(in srgb, var(--card-a), #fff 22%)" />
+          <stop offset="100%" stopColor="color-mix(in srgb, var(--card-b), #fff 8%)" />
+        </linearGradient>
       </defs>
-      <rect className="art-sky" x="14" y="14" width="152" height="192" rx="16" />
-      <TarotScene cardId={cardId} />
+      <rect className="art-frame-outer" x="10" y="10" width="160" height="200" rx="18" />
+      <rect className="art-sky" x="18" y="18" width="144" height="184" rx="14" fill={`url(#sky-${uid})`} />
+      <TarotScene cardId={cardId} uid={uid} />
       <path className="art-ground" d="M28 176 C58 164 80 190 112 176 C138 164 148 176 158 184 L158 196 L28 196 Z" />
-      <path className="art-border-line" d="M24 26 H156 M24 194 H156" />
+      <rect className="art-frame-inner" x="22" y="22" width="136" height="176" rx="12" />
     </svg>
   );
 }
 
-function TarotScene({ cardId }: { cardId?: string }) {
+function TarotScene({ cardId, uid }: { cardId?: string; uid: string }) {
+  const halo = `url(#halo-${uid})`;
+  const robe = `url(#robe-${uid})`;
+
   switch (cardId) {
     case "the-moon":
       return (
         <>
-          <circle className="art-halo" cx="90" cy="62" r="48" />
+          <circle className="art-halo" cx="90" cy="62" r="48" fill={halo} />
           <path className="art-moon" d="M105 35 C80 45 73 77 92 96 C66 92 52 68 63 46 C72 27 92 23 105 35 Z" />
           <path className="art-line" d="M52 150 V105 M128 150 V105" />
           <path className="art-line" d="M43 108 L52 92 L61 108 M119 108 L128 92 L137 108" />
           <path className="art-star" d="M45 51 L49 61 L60 62 L51 68 L54 79 L45 72 L36 79 L39 68 L30 62 L41 61 Z" />
+          <path className="art-star small" d="M130 48 L132 54 L138 54 L133 58 L135 64 L130 60 L125 64 L127 58 L122 54 L128 54 Z" />
         </>
       );
     case "the-sun":
@@ -199,12 +232,12 @@ function TarotScene({ cardId }: { cardId?: string }) {
     case "the-lovers":
       return (
         <>
-          <circle className="art-halo" cx="90" cy="54" r="42" />
-          <path className="art-wings" d="M90 60 C60 38 38 52 38 82 C58 78 74 86 90 112 C106 86 122 78 142 82 C142 52 120 38 90 60 Z" />
+          <circle className="art-halo" cx="90" cy="54" r="42" fill={halo} />
+          <path className="art-wings" d="M90 60 C60 38 38 52 38 82 C58 78 74 86 90 112 C106 86 122 78 142 82 C142 52 120 38 90 60 Z" fill={robe} />
           <circle className="art-face" cx="68" cy="132" r="13" />
           <circle className="art-face" cx="112" cy="132" r="13" />
-          <path className="art-body" d="M50 172 C55 146 82 146 86 172" />
-          <path className="art-body" d="M94 172 C98 146 125 146 130 172" />
+          <path className="art-body" d="M50 172 C55 146 82 146 86 172" fill={robe} />
+          <path className="art-body" d="M94 172 C98 146 125 146 130 172" fill={robe} />
           <path className="art-line" d="M76 116 C86 126 94 126 104 116" />
         </>
       );
@@ -222,10 +255,10 @@ function TarotScene({ cardId }: { cardId?: string }) {
     case "temperance":
       return (
         <>
-          <circle className="art-halo" cx="90" cy="54" r="34" />
-          <path className="art-wings" d="M76 82 C48 76 36 98 44 126 C60 116 72 111 82 116 M104 82 C132 76 144 98 136 126 C120 116 108 111 98 116" />
+          <circle className="art-halo" cx="90" cy="54" r="34" fill={halo} />
+          <path className="art-wings" d="M76 82 C48 76 36 98 44 126 C60 116 72 111 82 116 M104 82 C132 76 144 98 136 126 C120 116 108 111 98 116" fill={robe} />
           <circle className="art-face" cx="90" cy="86" r="14" />
-          <path className="art-body" d="M70 168 C72 118 108 118 110 168 Z" />
+          <path className="art-body" d="M70 168 C72 118 108 118 110 168 Z" fill={robe} />
           <path className="art-cup" d="M58 116 L78 122 L74 136 L62 132 Z M102 136 L122 130 L118 116 L106 122 Z" />
           <path className="art-water" d="M78 126 C88 134 94 132 104 126" />
         </>
@@ -235,7 +268,7 @@ function TarotScene({ cardId }: { cardId?: string }) {
         <>
           <path className="art-infinity" d="M66 54 C78 38 102 70 114 54 C102 38 78 70 66 54 Z" />
           <circle className="art-face" cx="90" cy="85" r="14" />
-          <path className="art-body" d="M70 170 C74 116 106 116 110 170 Z" />
+          <path className="art-body" d="M70 170 C74 116 106 116 110 170 Z" fill={robe} />
           <path className="art-line" d="M90 70 V38 M90 100 V142" />
           <path className="art-line" d="M54 148 H126" />
           <circle className="art-dot" cx="58" cy="148" r="5" />
@@ -247,7 +280,7 @@ function TarotScene({ cardId }: { cardId?: string }) {
         <>
           <path className="art-crown" d="M62 62 L74 42 L90 62 L106 42 L118 62 Z" />
           <circle className="art-face" cx="90" cy="86" r="16" />
-          <path className="art-body" d="M58 174 C62 116 118 116 122 174 Z" />
+          <path className="art-body" d="M58 174 C62 116 118 116 122 174 Z" fill={robe} />
           <path className="art-line" d="M70 132 C86 144 96 144 112 132" />
           <path className="art-star" d="M136 76 L141 88 L154 88 L143 96 L148 108 L136 100 L124 108 L129 96 L118 88 L131 88 Z" />
         </>
@@ -255,8 +288,8 @@ function TarotScene({ cardId }: { cardId?: string }) {
     case "judgement":
       return (
         <>
-          <circle className="art-halo" cx="90" cy="58" r="38" />
-          <path className="art-wings" d="M90 58 C60 42 44 58 42 86 C62 80 76 90 90 110 C104 90 118 80 138 86 C136 58 120 42 90 58 Z" />
+          <circle className="art-halo" cx="90" cy="58" r="38" fill={halo} />
+          <path className="art-wings" d="M90 58 C60 42 44 58 42 86 C62 80 76 90 90 110 C104 90 118 80 138 86 C136 58 120 42 90 58 Z" fill={robe} />
           <path className="art-trumpet" d="M78 88 L120 66 L128 82 L84 104 Z" />
           <path className="art-line" d="M50 162 V132 M90 166 V126 M130 162 V132" />
           <circle className="art-face" cx="50" cy="126" r="9" />
@@ -269,9 +302,112 @@ function TarotScene({ cardId }: { cardId?: string }) {
         <>
           <path className="art-crown" d="M62 72 H118 L108 44 H72 Z" />
           <circle className="art-face" cx="90" cy="88" r="13" />
-          <path className="art-body" d="M62 174 C64 116 116 116 118 174 Z" />
+          <path className="art-body" d="M62 174 C64 116 116 116 118 174 Z" fill={robe} />
           <path className="art-line" d="M90 104 V154 M76 126 H104" />
           <path className="art-line" d="M46 174 H134 M54 150 V104 M126 150 V104" />
+        </>
+      );
+    case "the-hermit":
+      return (
+        <>
+          <circle className="art-halo" cx="90" cy="50" r="30" fill={halo} />
+          <circle className="art-lantern" cx="90" cy="72" r="14" />
+          <path className="art-line" d="M90 86 V160" />
+          <circle className="art-face" cx="90" cy="108" r="12" />
+          <path className="art-body" d="M72 170 C74 130 106 130 108 170 Z" fill={robe} />
+          <path className="art-star small" d="M48 44 L50 50 L56 50 L51 54 L53 60 L48 56 L43 60 L45 54 L40 50 L46 50 Z" />
+        </>
+      );
+    case "wheel-of-fortune":
+      return (
+        <>
+          <circle className="art-wheel" cx="90" cy="90" r="52" />
+          <circle className="art-wheel-inner" cx="90" cy="90" r="18" />
+          {Array.from({ length: 8 }).map((_, i) => {
+            const angle = (i * Math.PI) / 4;
+            return (
+              <line
+                key={i}
+                className="art-line thin"
+                x1={90 + Math.cos(angle) * 18}
+                y1={90 + Math.sin(angle) * 18}
+                x2={90 + Math.cos(angle) * 50}
+                y2={90 + Math.sin(angle) * 50}
+              />
+            );
+          })}
+          <path className="art-star" d="M90 34 L94 46 L106 46 L96 54 L100 66 L90 58 L80 66 L84 54 L74 46 L86 46 Z" />
+        </>
+      );
+    case "strength":
+      return (
+        <>
+          <circle className="art-halo" cx="90" cy="56" r="36" fill={halo} />
+          <path className="art-lion" d="M52 148 C48 120 62 100 90 96 C118 100 132 120 128 148 C120 138 108 132 90 134 C72 132 60 138 52 148 Z" />
+          <circle className="art-face" cx="90" cy="72" r="14" />
+          <path className="art-line" d="M90 86 V130" />
+          <path className="art-infinity" d="M78 48 C84 40 96 56 102 48 C96 40 84 56 78 48 Z" />
+        </>
+      );
+    case "the-chariot":
+      return (
+        <>
+          <rect className="art-chariot" x="48" y="108" width="84" height="36" rx="6" />
+          <circle className="art-dot" cx="62" cy="152" r="10" />
+          <circle className="art-dot" cx="118" cy="152" r="10" />
+          <path className="art-line" d="M90 60 V108" />
+          <circle className="art-face" cx="90" cy="52" r="12" />
+          <path className="art-star" d="M90 28 L93 36 L102 36 L95 42 L98 50 L90 44 L82 50 L85 42 L78 36 L87 36 Z" />
+        </>
+      );
+    case "the-devil":
+      return (
+        <>
+          <path className="art-horns" d="M72 48 L80 28 L90 48 L100 28 L108 48 Z" />
+          <circle className="art-face" cx="90" cy="78" r="16" />
+          <path className="art-body" d="M64 170 C66 116 114 116 116 170 Z" fill={robe} />
+          <path className="art-chain" d="M58 120 C70 130 110 130 122 120 M58 136 C70 146 110 146 122 136" />
+          <rect className="art-pedestal" x="54" y="168" width="72" height="10" rx="3" />
+        </>
+      );
+    case "the-tower":
+      return (
+        <>
+          <rect className="art-tower" x="68" y="56" width="44" height="110" rx="4" />
+          <path className="art-lightning" d="M96 34 L86 72 L94 72 L82 108" />
+          <path className="art-debris" d="M52 166 L68 148 M128 166 L112 148" />
+          <circle className="art-dot" cx="52" cy="48" r="5" />
+          <circle className="art-dot" cx="128" cy="44" r="4" />
+        </>
+      );
+    case "death":
+      return (
+        <>
+          <circle className="art-halo" cx="90" cy="48" r="28" fill={halo} />
+          <path className="art-flag" d="M90 60 V160 M90 60 L130 76 L90 92 Z" />
+          <circle className="art-face" cx="90" cy="118" r="11" />
+          <path className="art-line" d="M50 170 H130" />
+          <path className="art-star small" d="M48 80 L50 86 L56 86 L51 90 L53 96 L48 92 L43 96 L45 90 L40 86 L46 86 Z" />
+        </>
+      );
+    case "the-world":
+      return (
+        <>
+          <ellipse className="art-wreath" cx="90" cy="96" rx="58" ry="62" />
+          <circle className="art-face" cx="90" cy="96" r="18" />
+          <path className="art-line" d="M90 78 V114 M72 96 H108" />
+          {Array.from({ length: 4 }).map((_, i) => {
+            const angle = (i * Math.PI) / 2 + Math.PI / 4;
+            return (
+              <circle
+                key={i}
+                className="art-dot"
+                cx={90 + Math.cos(angle) * 48}
+                cy={96 + Math.sin(angle) * 48}
+                r="5"
+              />
+            );
+          })}
         </>
       );
     case "the-fool":
@@ -280,7 +416,7 @@ function TarotScene({ cardId }: { cardId?: string }) {
         <>
           <circle className="art-sun" cx="132" cy="48" r="18" />
           <circle className="art-face" cx="82" cy="82" r="13" />
-          <path className="art-body" d="M62 158 C66 108 102 108 106 158 Z" />
+          <path className="art-body" d="M62 158 C66 108 102 108 106 158 Z" fill={robe} />
           <path className="art-line" d="M102 94 L132 74 M63 118 L40 104 M110 158 L134 178" />
           <path className="art-cliff" d="M80 182 L128 146 L150 190 Z" />
           <circle className="art-dot" cx="46" cy="102" r="6" />
@@ -289,7 +425,9 @@ function TarotScene({ cardId }: { cardId?: string }) {
   }
 }
 
-function PlacePanel({ place, featured = false }: { place: PlaceRecommendation; featured?: boolean }) {
+function PlacePanel({ place, card, featured = false }: { place: PlaceRecommendation; card: TarotCard; featured?: boolean }) {
+  const reading = useMemo(() => buildBarReading(card, place), [card, place]);
+
   return (
     <article className={featured ? "place-panel featured" : "place-panel"}>
       <div className="place-topline">
@@ -301,14 +439,32 @@ function PlacePanel({ place, featured = false }: { place: PlaceRecommendation; f
         <MapPin size={16} />
         {place.address}
       </p>
+
+      <div className="insight-grid">
+        <div className="insight-card">
+          <span className="insight-label">氛围解读</span>
+          <p>{reading.atmosphere}</p>
+        </div>
+        <div className="insight-card highlight">
+          <span className="insight-label">
+            <Wine size={14} />
+            牌面荐酒
+          </span>
+          <strong className="drink-name">{reading.drink.name}</strong>
+          <p>{reading.drink.note}</p>
+        </div>
+      </div>
+
       <div className="stats">
-        <span>
+        <span className="stat-rating">
           <Star size={15} />
           {place.rating ? place.rating.toFixed(1) : "N/A"}
         </span>
-        <span>{place.userRatingCount ? `${place.userRatingCount} reviews` : "评价数未知"}</span>
-        <span>{formatPrice(place.priceLevel)}</span>
+        <span title={reading.ratingInsight}>{place.userRatingCount ? `${place.userRatingCount} reviews` : "评价数未知"}</span>
+        <span className="stat-percapita">{reading.priceDisplay}</span>
       </div>
+      <p className="rating-insight">{reading.ratingInsight}</p>
+
       <div className="place-actions">
         {place.mapsUri ? (
           <a className="link-button" href={place.mapsUri} target="_blank" rel="noreferrer">
@@ -325,18 +481,6 @@ function PlacePanel({ place, featured = false }: { place: PlaceRecommendation; f
       </div>
     </article>
   );
-}
-
-function formatPrice(price?: string) {
-  if (!price) return "价格未知";
-  const map: Record<string, string> = {
-    PRICE_LEVEL_FREE: "免费",
-    PRICE_LEVEL_INEXPENSIVE: "$",
-    PRICE_LEVEL_MODERATE: "$$",
-    PRICE_LEVEL_EXPENSIVE: "$$$",
-    PRICE_LEVEL_VERY_EXPENSIVE: "$$$$"
-  };
-  return map[price] ?? price;
 }
 
 function wait(ms: number) {

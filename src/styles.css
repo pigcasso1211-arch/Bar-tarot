@@ -65,6 +65,14 @@ a {
   line-height: 1.7;
 }
 
+.deck-count {
+  margin: 16px 0 0;
+  color: rgba(230, 199, 111, 0.72);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
 .tarot-stage {
   perspective: 1400px;
   display: grid;
@@ -106,14 +114,95 @@ a {
 }
 
 .card-back {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding-bottom: 26px;
   background:
-    linear-gradient(45deg, transparent 44%, rgba(230, 199, 111, 0.3) 45%, transparent 47%),
-    linear-gradient(135deg, #1f2430, #4b2e5d 48%, #1a5c63);
+    radial-gradient(circle at 50% 38%, rgba(230, 199, 111, 0.14), transparent 42%),
+    repeating-linear-gradient(
+      45deg,
+      rgba(230, 199, 111, 0.06) 0 2px,
+      transparent 2px 14px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      rgba(230, 199, 111, 0.06) 0 2px,
+      transparent 2px 14px
+    ),
+    linear-gradient(145deg, #141824 0%, #2a1f3d 46%, #12343a 100%);
 }
 
-.card-back span {
-  font-size: clamp(2.4rem, 8vw, 4.5rem);
+.card-back-frame {
+  position: absolute;
+  inset: 18px;
+  border: 1px solid rgba(230, 199, 111, 0.42);
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+}
+
+.card-back-frame::before {
+  content: "";
+  position: absolute;
+  inset: 10px;
+  border: 1px solid rgba(230, 199, 111, 0.2);
+  border-radius: 8px;
+}
+
+.card-back-corner {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-color: rgba(230, 199, 111, 0.65);
+  border-style: solid;
+}
+
+.card-back-corner.tl {
+  top: 8px;
+  left: 8px;
+  border-width: 2px 0 0 2px;
+}
+
+.card-back-corner.tr {
+  top: 8px;
+  right: 8px;
+  border-width: 2px 2px 0 0;
+}
+
+.card-back-corner.bl {
+  bottom: 8px;
+  left: 8px;
+  border-width: 0 0 2px 2px;
+}
+
+.card-back-corner.br {
+  bottom: 8px;
+  right: 8px;
+  border-width: 0 2px 2px 0;
+}
+
+.card-back-emblem {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  color: #e6c76f;
+  background: rgba(230, 199, 111, 0.1);
+  border: 1px solid rgba(230, 199, 111, 0.35);
+  box-shadow: 0 0 28px rgba(230, 199, 111, 0.18);
+}
+
+.card-back-label {
+  position: relative;
+  z-index: 1;
+  font-size: clamp(1.1rem, 4vw, 1.6rem);
   font-weight: 900;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(230, 199, 111, 0.88);
 }
 
 .card-front {
@@ -139,6 +228,54 @@ a {
   border: 1px solid rgba(66, 45, 18, 0.28);
   border-radius: 12px;
   pointer-events: none;
+}
+
+.card-front::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.28), transparent 48%);
+  pointer-events: none;
+}
+
+.card-corner {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border: 2px solid color-mix(in srgb, var(--card-b), #2d2316 30%);
+  pointer-events: none;
+}
+
+.card-corner.tl {
+  top: 10px;
+  left: 10px;
+  border-right: 0;
+  border-bottom: 0;
+  border-radius: 4px 0 0 0;
+}
+
+.card-corner.tr {
+  top: 10px;
+  right: 10px;
+  border-left: 0;
+  border-bottom: 0;
+  border-radius: 0 4px 0 0;
+}
+
+.card-corner.bl {
+  bottom: 10px;
+  left: 10px;
+  border-right: 0;
+  border-top: 0;
+  border-radius: 0 0 0 4px;
+}
+
+.card-corner.br {
+  bottom: 10px;
+  right: 10px;
+  border-left: 0;
+  border-top: 0;
+  border-radius: 0 0 4px 0;
 }
 
 .card-front small,
@@ -178,8 +315,19 @@ a {
   filter: drop-shadow(0 12px 16px rgba(45, 35, 22, 0.2));
 }
 
+.art-frame-outer,
+.art-frame-inner {
+  fill: none;
+  stroke: rgba(45, 35, 22, 0.35);
+  stroke-width: 1.5;
+}
+
+.art-frame-inner {
+  stroke: rgba(45, 35, 22, 0.22);
+  stroke-dasharray: 4 3;
+}
+
 .art-sky {
-  fill: color-mix(in srgb, var(--card-a), #f8f4e8 18%);
   stroke: rgba(45, 35, 22, 0.42);
   stroke-width: 2;
 }
@@ -202,11 +350,63 @@ a {
 .art-crown,
 .art-trumpet,
 .art-cup,
-.art-dot {
+.art-dot,
+.art-lantern,
+.art-wheel,
+.art-lion,
+.art-chariot,
+.art-horns,
+.art-tower,
+.art-flag,
+.art-wreath,
+.art-pedestal {
   fill: var(--card-b);
   stroke: rgba(45, 35, 22, 0.72);
   stroke-linejoin: round;
   stroke-width: 2;
+}
+
+.art-star.small {
+  transform-origin: center;
+}
+
+.art-wheel {
+  fill: none;
+  stroke: var(--card-b);
+  stroke-width: 3;
+}
+
+.art-wheel-inner {
+  fill: color-mix(in srgb, var(--card-a), #fff 12%);
+  stroke: rgba(45, 35, 22, 0.6);
+  stroke-width: 2;
+}
+
+.art-lantern {
+  fill: #fff6c7;
+  filter: drop-shadow(0 0 8px rgba(230, 199, 111, 0.5));
+}
+
+.art-lightning {
+  fill: none;
+  stroke: var(--card-b);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.art-chain,
+.art-debris {
+  fill: none;
+  stroke: rgba(45, 35, 22, 0.74);
+  stroke-linecap: round;
+  stroke-width: 2.5;
+}
+
+.art-wreath {
+  fill: none;
+  stroke: var(--card-b);
+  stroke-width: 3;
 }
 
 .art-sun {
@@ -245,6 +445,10 @@ a {
 .art-infinity {
   stroke: var(--card-b);
   stroke-width: 4;
+}
+
+.art-line.thin {
+  stroke-width: 2;
 }
 
 .actions {
@@ -397,8 +601,53 @@ a {
   margin-top: 5px;
 }
 
+.insight-grid {
+  display: grid;
+  gap: 12px;
+  margin: 18px 0;
+}
+
+.insight-card {
+  padding: 14px 16px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.insight-card.highlight {
+  background: rgba(230, 199, 111, 0.1);
+  border-color: rgba(230, 199, 111, 0.28);
+}
+
+.insight-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  color: #e6c76f;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.insight-card p {
+  margin: 0;
+  color: rgba(248, 244, 232, 0.78);
+  font-size: 0.94rem;
+  line-height: 1.65;
+}
+
+.drink-name {
+  display: block;
+  margin-bottom: 6px;
+  color: #f8f4e8;
+  font-size: 1.15rem;
+  letter-spacing: 0.02em;
+}
+
 .stats {
-  margin: 20px 0 24px;
+  margin: 8px 0 10px;
 }
 
 .stats span {
@@ -412,6 +661,24 @@ a {
   color: rgba(248, 244, 232, 0.86);
   font-size: 0.92rem;
   font-weight: 800;
+}
+
+.stat-rating {
+  color: #f8f4e8;
+  background: rgba(230, 199, 111, 0.18);
+}
+
+.stat-percapita {
+  color: #e6c76f;
+  border: 1px solid rgba(230, 199, 111, 0.28);
+  background: rgba(230, 199, 111, 0.08);
+}
+
+.rating-insight {
+  margin: 0 0 20px;
+  color: rgba(248, 244, 232, 0.62);
+  font-size: 0.86rem;
+  line-height: 1.6;
 }
 
 .link-button,
@@ -559,7 +826,8 @@ a {
   }
 
   .result-layout,
-  .alternative-list {
+  .alternative-list,
+  .insight-grid {
     grid-template-columns: 1fr;
   }
 }
