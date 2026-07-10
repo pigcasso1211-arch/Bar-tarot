@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { pickTarotCard, tarotCards, type TarotCard } from "../shared/tarot";
-import type { PlaceRecommendation } from "../shared/places";
+import type { DrinkRecommendation, PlaceRecommendation } from "../shared/places";
 import { mockPlaces } from "./mockPlaces";
 
 type GooglePlace = {
@@ -82,6 +82,43 @@ app.post("/api/recommend", async (req, res) => {
   }
 });
 
+app.post("/api/drink-recommend", async (req, res) => {
+  const city = typeof req.body?.city === "string" ? req.body.city : "Singapore";
+  const barName = typeof req.body?.barName === "string" ? req.body.barName.trim() : "";
+
+  if (!barName) {
+    res.status(400).json({ error: "barName is required" });
+    return;
+  }
+
+  const card = pickTarotCard(typeof req.body?.cardId === "string" ? req.body.cardId : undefined);
+
+  try {
+    const bars = await findNamedBars(barName, city, card);
+    const bar = bars[0] ?? mockBarForName(barName, city, card);
+
+    res.json({
+      card,
+      bar,
+      drink: buildDrinkRecommendation(card, bar),
+      source: bars.length > 0 ? "google" : "mock",
+      notice:
+        bars.length > 0
+          ? "Google Places 已匹配到这家 bar；具体酒单以店内菜单为准。"
+          : "暂时无法实时确认这家 bar，已按你输入的店名生成点单建议。"
+    });
+  } catch (error) {
+    const bar = mockBarForName(barName, city, card);
+    res.json({
+      card,
+      bar,
+      drink: buildDrinkRecommendation(card, bar),
+      source: "mock",
+      notice: "Google Places 暂不可用，已按你输入的店名生成点单建议。"
+    });
+  }
+});
+
 if (process.env.NODE_ENV === "production" && existsSync(distDir)) {
   app.use(express.static(distDir));
   app.get("*", (_req, res) => {
@@ -133,6 +170,44 @@ async function findPlaces(card: TarotCard, city: string): Promise<PlaceRecommend
   }
 }
 
+async function findNamedBars(barName: string, city: string, card: TarotCard): Promise<PlaceRecommendation[]> {
+  const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+  if (!apiKey) return [];
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 7000);
+
+  try {
+    const response = await fetch("https://places.googleapis.com/v1/places:searchText", {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": apiKey,
+        "X-Goog-FieldMask": fieldMask
+      },
+      body: JSON.stringify({
+        textQuery: `${barName} bar ${city}`,
+        includedType: "bar",
+        regionCode: "SG",
+        languageCode: "zh-CN",
+        pageSize: 5
+      })
+    });
+
+    if (!response.ok) return [];
+    const data = (await response.json()) as { places?: GooglePlace[] };
+
+    return dedupePlaces(
+      (data.places ?? [])
+        .filter((place) => place.businessStatus === "OPERATIONAL")
+        .map((place) => normalizeGooglePlace(place, card))
+    );
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 function normalizeGooglePlace(place: GooglePlace, card: TarotCard): PlaceRecommendation {
   const isOpenTonight =
     typeof place.currentOpeningHours?.openNow === "boolean" ? place.currentOpeningHours.openNow : null;
@@ -158,6 +233,41 @@ function mockForCard(card: TarotCard) {
   const exact = mockPlaces.filter((place) => place.moodTags.includes(card.mood));
   const merged = [...exact, ...mockPlaces.filter((place) => !exact.includes(place))];
   return merged.slice(0, 8);
+}
+
+function mockBarForName(barName: string, city: string, card: TarotCard): PlaceRecommendation {
+  const fallback = mockForCard(card)[0];
+
+  return {
+    ...fallback,
+    id: `typed-${barName.toLowerCase().replace(/[^a-z0-9]+/gi, "-")}`,
+    name: barName,
+    address: city,
+    mapsUri: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${barName} ${city}`)}`,
+    source: "mock",
+    moodTags: [card.mood]
+  };
+}
+
+function buildDrinkRecommendation(card: TarotCard, bar: PlaceRecommendation): DrinkRecommendation {
+  const orderHintByMood: Record<TarotCard["mood"], string> = {
+    mysterious: "在酒单里找 speakeasy、smoky、bitter、spirit-forward 这一类；没有同名就请 bartender 做一杯暗色、苦甜、酒感清楚的版本。",
+    social: "在酒单里找 highball、spritz、fizz 或适合开场的清爽长饮；今晚这张牌不适合太沉重。",
+    romantic: "在酒单里找 floral、champagne、berry、wine-based 或酸甜柔和的杯型，适合慢慢喝。",
+    rooftop: "在酒单里找 citrus、tropical、sparkling 或 signature long drink，最好是一杯能配夜景的亮口味。",
+    quiet: "在酒单里找 highball、old fashioned、toddy 或低调经典款，不需要过多装饰。",
+    experimental: "在酒单里找 clarified、smoked、fermented、herbal 或 bartender's choice，把选择权交给吧台。",
+    luxury: "在酒单里找 champagne、martini、hotel signature 或 premium spirits，今晚值得点一杯做工细的。",
+    music: "在酒单里找 whiskey sour、rum、jazz-age classics 或节奏感强的酸甜款。",
+    classic: "在酒单里找 martini、negroni、manhattan、daiquiri 这些经典结构，重点是比例准确。",
+    wildcard: "在酒单里找 daily special、seasonal、bartender's choice 或你平常不会点的那一杯。"
+  };
+
+  return {
+    name: card.signatureDrink,
+    note: `${card.drinkNote} 这张牌给 ${bar.name} 的点单方向是：先看菜单里有没有接近它的 signature。`,
+    orderHint: orderHintByMood[card.mood]
+  };
 }
 
 function weightedPick(places: PlaceRecommendation[], card: TarotCard) {

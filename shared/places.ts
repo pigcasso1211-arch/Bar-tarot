@@ -23,3 +23,17 @@ export type RecommendResponse = {
   source: "google" | "mock";
   notice?: string;
 };
+
+export type DrinkRecommendation = {
+  name: string;
+  note: string;
+  orderHint: string;
+};
+
+export type DrinkRecommendResponse = {
+  card: import("./tarot").TarotCard;
+  bar: PlaceRecommendation;
+  drink: DrinkRecommendation;
+  source: "google" | "mock";
+  notice?: string;
+};

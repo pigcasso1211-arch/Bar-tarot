@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { ExternalLink, MapPin, RefreshCw, Sparkles, Shuffle, Star, Wine } from "lucide-react";
-import type { RecommendResponse, PlaceRecommendation } from "../shared/places";
+import { ExternalLink, MapPin, RefreshCw, Search, Sparkles, Shuffle, Star, Wine } from "lucide-react";
+import type { DrinkRecommendResponse, RecommendResponse, PlaceRecommendation } from "../shared/places";
 import { buildBarReading } from "../shared/reading";
 import type { TarotCard } from "../shared/tarot";
 import "./styles.css";
@@ -16,7 +16,17 @@ function App() {
   const [result, setResult] = useState<RecommendResponse | null>(null);
   const [state, setState] = useState<DrawState>("idle");
   const [error, setError] = useState("");
+  const [barQuery, setBarQuery] = useState("");
+  const [drinkResult, setDrinkResult] = useState<DrinkRecommendResponse | null>(null);
+  const [drinkState, setDrinkState] = useState<DrawState>("idle");
+  const [drinkError, setDrinkError] = useState("");
+  const [drinkSpreadSeed, setDrinkSpreadSeed] = useState(() => Math.random());
+  const [selectedDrinkCardId, setSelectedDrinkCardId] = useState<string>();
+  const [selectedDrinkDeckIndex, setSelectedDrinkDeckIndex] = useState<number>();
+  const [activeDrinkBarName, setActiveDrinkBarName] = useState("");
   const resultRef = useRef<HTMLElement>(null);
+  const spreadRef = useRef<HTMLDivElement>(null);
+  const drinkSpreadRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetch("/api/tarot-cards")
@@ -25,24 +35,18 @@ function App() {
       .catch(() => setCards([]));
   }, []);
 
-  useEffect(() => {
-    if (state === "revealed" && resultRef.current) {
-      resultRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  }, [state, result]);
-
-  const currentCard = useMemo(() => {
-    if (result?.card) return result.card;
-    return cards.find((card) => card.id === selectedCardId) ?? cards[0];
-  }, [cards, result, selectedCardId]);
-
   const spreadCards = useMemo(() => buildSpread(cards, selectedCardId, spreadSeed), [cards, selectedCardId, spreadSeed]);
+  const drinkSpreadCards = useMemo(
+    () => buildSpread(cards, selectedDrinkCardId, drinkSpreadSeed),
+    [cards, selectedDrinkCardId, drinkSpreadSeed]
+  );
 
   async function draw(cardId?: string, deckIndex?: number) {
     setSelectedDeckIndex(deckIndex);
     setState("drawing");
     setError("");
     setResult(null);
+    resetDrinkDraw();
 
     try {
       await wait(520);
@@ -57,6 +61,7 @@ function App() {
       setSelectedCardId(data.card.id);
       setResult(data);
       setState("revealed");
+      requestAnimationFrame(() => scrollSpreadCardIntoFocus(spreadRef, deckIndex));
     } catch {
       setError("今晚的牌面被云遮住了。请稍后再抽一次。");
       setState("error");
@@ -65,19 +70,97 @@ function App() {
 
   function redraw() {
     const nextSeed = Math.random();
+    const nextSpread = buildSpread(cards, undefined, nextSeed);
+    const deckIndex = Math.floor(Math.random() * Math.max(nextSpread.length, 1));
+    const cardId = nextSpread[deckIndex]?.id;
+
     setSpreadSeed(nextSeed);
-    const cardId = cards[Math.floor(Math.random() * Math.max(cards.length, 1))]?.id;
-    const deckIndex = Math.floor(Math.random() * Math.max(spreadCards.length, 1));
-    void draw(cardId, deckIndex);
+    setSelectedCardId(undefined);
+    requestAnimationFrame(() => {
+      scrollSpreadCardIntoFocus(spreadRef, deckIndex);
+      void draw(cardId, deckIndex);
+    });
+  }
+
+  function scrollSpreadCardIntoFocus(ref: React.RefObject<HTMLDivElement | null>, deckIndex?: number) {
+    const spread = ref.current;
+    if (!spread || deckIndex === undefined) return;
+
+    const card = spread.children.item(deckIndex) as HTMLElement | null;
+    if (!card) return;
+
+    const left = card.offsetLeft - spread.clientWidth / 2 + card.clientWidth / 2;
+    spread.scrollTo({ left, behavior: "smooth" });
   }
 
   function chooseAlternative(place: PlaceRecommendation) {
     if (!result) return;
+    resetDrinkDraw();
     setResult({
       ...result,
       place,
       alternatives: [result.place, ...result.alternatives.filter((item) => item.id !== place.id)].slice(0, 3)
     });
+  }
+
+  function resetDrinkDraw() {
+    setDrinkResult(null);
+    setDrinkError("");
+    setDrinkState("idle");
+    setSelectedDrinkCardId(undefined);
+    setSelectedDrinkDeckIndex(undefined);
+    setActiveDrinkBarName("");
+  }
+
+  async function requestDrinkForBar(barName: string, cardId?: string) {
+    const response = await fetch("/api/drink-recommend", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ city: "Singapore", barName, cardId })
+    });
+
+    if (!response.ok) throw new Error("drink recommend failed");
+    return (await response.json()) as DrinkRecommendResponse;
+  }
+
+  async function drawDrinkForTypedBar(event?: React.FormEvent<HTMLFormElement>) {
+    event?.preventDefault();
+    await drawDrinkForBar(barQuery);
+  }
+
+  async function drawDrinkForBar(barNameInput: string, deckIndexInput?: number, cardIdInput?: string) {
+    const barName = barNameInput.trim();
+    if (!barName) {
+      setDrinkError("先输入一家 bar 的名字，或者先抽出一家 bar。");
+      return;
+    }
+
+    const nextSeed = deckIndexInput === undefined ? Math.random() : drinkSpreadSeed;
+    const nextSpread = deckIndexInput === undefined ? buildSpread(cards, undefined, nextSeed) : drinkSpreadCards;
+    const deckIndex = deckIndexInput ?? Math.floor(Math.random() * Math.max(nextSpread.length, 1));
+    const cardId = cardIdInput ?? nextSpread[deckIndex]?.id;
+
+    setDrinkSpreadSeed(nextSeed);
+    setActiveDrinkBarName(barName);
+    setSelectedDrinkDeckIndex(deckIndex);
+    setSelectedDrinkCardId(undefined);
+    setDrinkState("drawing");
+    setDrinkError("");
+    setDrinkResult(null);
+
+    requestAnimationFrame(() => scrollSpreadCardIntoFocus(drinkSpreadRef, deckIndex));
+
+    try {
+      await wait(620);
+      const data = await requestDrinkForBar(barName, cardId);
+      setSelectedDrinkCardId(data.card.id);
+      setDrinkResult(data);
+      setDrinkState("revealed");
+      requestAnimationFrame(() => scrollSpreadCardIntoFocus(drinkSpreadRef, deckIndex));
+    } catch {
+      setDrinkError("这家 bar 的酒单被夜色挡住了。换个名字或稍后再试。");
+      setDrinkState("error");
+    }
   }
 
   return (
@@ -92,15 +175,18 @@ function App() {
 
         <div className="spread-panel">
           <div className="spread-heading">
-            <p>从牌阵里选一张</p>
-            <span>{result ? result.card.name : "让今晚自己靠近你"}</span>
+            <p>滑动牌面，选一张</p>
+            <span>{result ? result.card.name : "整副牌已经洗好"}</span>
           </div>
-          <div className={`tarot-spread ${state === "drawing" ? "is-drawing" : ""} ${result ? "has-selection" : ""}`}>
+          <div
+            className={`tarot-spread ${state === "drawing" ? "is-drawing" : ""} ${result ? "has-selection" : ""}`}
+            ref={spreadRef}
+          >
             {spreadCards.map((card, index) => {
               const isSelected = selectedDeckIndex === index;
               return (
                 <button
-                  className={`spread-card ${isSelected ? "is-selected" : ""}`}
+                  className={`spread-card ${isSelected ? "is-selected" : ""} ${isSelected && result ? "is-flipped" : ""}`}
                   type="button"
                   key={`${card?.id ?? "empty"}-${index}`}
                   onClick={() => draw(card?.id, index)}
@@ -109,19 +195,12 @@ function App() {
                 >
                   <div className="spread-card-inner">
                     <CardBack compact label={isSelected && state === "drawing" ? "Draw" : ""} />
-                    {isSelected && result?.card ? <CardFront card={result.card} compact /> : null}
+                    {isSelected && result?.card ? <CardFront card={result.card} /> : null}
                   </div>
                 </button>
               );
             })}
           </div>
-          {currentCard ? (
-            <div className="selected-card-preview">
-              <div className={`preview-card ${result ? "is-visible" : ""}`}>
-                <CardFront card={result?.card ?? currentCard} />
-              </div>
-            </div>
-          ) : null}
         </div>
 
         <div className="actions">
@@ -144,7 +223,16 @@ function App() {
             {result.notice ? <span className="notice">{result.notice}</span> : null}
           </article>
 
-          <PlacePanel place={result.place} card={result.card} featured />
+          <PlacePanel
+            place={result.place}
+            card={result.card}
+            featured
+            onDrawDrink={() => {
+              setBarQuery(result.place.name);
+              void drawDrinkForBar(result.place.name);
+            }}
+            drinkState={drinkState}
+          />
 
           <section className="alternatives" aria-label="备选酒吧">
             <div className="section-heading">
@@ -173,21 +261,73 @@ function App() {
           <p>先抽一张牌，今晚的第一杯就有方向了。</p>
         </section>
       )}
+
+      <section className="drink-oracle" aria-label="按酒吧抽酒单推荐">
+        <div className="drink-oracle-copy">
+          <p className="eyebrow">Menu Tarot</p>
+          <h2>抽一杯酒</h2>
+          <p>用刚抽到的酒吧，或者输入你已经选好的 bar。再抽一张牌，让塔罗决定今晚该在酒单上找哪一杯。</p>
+        </div>
+
+        <form className="bar-search" onSubmit={drawDrinkForTypedBar}>
+          <label htmlFor="bar-search-input">Bar name</label>
+          <div className="bar-search-row">
+            <input
+              id="bar-search-input"
+              value={barQuery}
+              onChange={(event) => setBarQuery(event.target.value)}
+              placeholder="例如 Atlas, Manhattan, Jigger & Pony"
+            />
+            <button type="submit" disabled={drinkState === "drawing"}>
+              {drinkState === "drawing" ? <RefreshCw className="spin" size={17} /> : <Search size={17} />}
+              {drinkState === "drawing" ? "正在洗牌" : "抽一杯酒"}
+            </button>
+          </div>
+        </form>
+
+        <div className="drink-spread-shell">
+          <div className="spread-heading">
+            <p>滑动牌面，抽一杯</p>
+            <span>{drinkResult ? drinkResult.card.name : activeDrinkBarName || "先输入或选定一家 bar"}</span>
+          </div>
+          <div
+            className={`tarot-spread drink-spread ${drinkState === "drawing" ? "is-drawing" : ""} ${
+              drinkResult ? "has-selection" : ""
+            }`}
+            ref={drinkSpreadRef}
+          >
+            {drinkSpreadCards.map((card, index) => {
+              const isSelected = selectedDrinkDeckIndex === index;
+              return (
+                <button
+                  className={`spread-card ${isSelected ? "is-selected" : ""} ${
+                    isSelected && drinkResult ? "is-flipped" : ""
+                  }`}
+                  type="button"
+                  key={`drink-${card?.id ?? "empty"}-${index}`}
+                  onClick={() => drawDrinkForBar(barQuery || result?.place.name || "", index, card?.id)}
+                  disabled={drinkState === "drawing"}
+                  aria-label={card ? `抽第 ${index + 1} 张酒牌` : "等待牌组"}
+                >
+                  <div className="spread-card-inner">
+                    <CardBack compact label={isSelected && drinkState === "drawing" ? "Drink" : ""} />
+                    {isSelected && drinkResult?.card ? <CardFront card={drinkResult.card} /> : null}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {drinkError ? <p className="drink-error">{drinkError}</p> : null}
+        {drinkResult ? <DrinkResultPanel result={drinkResult} label="抽一杯酒" /> : null}
+      </section>
     </main>
   );
 }
 
-function buildSpread(cards: TarotCard[], selectedCardId: string | undefined, seed: number) {
-  const selected = cards.find((card) => card.id === selectedCardId);
-  const pool = cards.filter((card) => card.id !== selectedCardId);
-  const spread = seededShuffle(pool, seed).slice(0, 12);
-
-  if (selected) {
-    const selectedIndex = Math.min(5, spread.length);
-    spread.splice(selectedIndex, 0, selected);
-  }
-
-  return spread.slice(0, 12);
+function buildSpread(cards: TarotCard[], _selectedCardId: string | undefined, seed: number) {
+  return seededShuffle(cards, seed);
 }
 
 function seededShuffle(cards: TarotCard[], seed: number) {
@@ -551,7 +691,46 @@ function MinorArcanaScene({ suit }: { suit: "wands" | "cups" | "swords" | "penta
   }
 }
 
-function PlacePanel({ place, card, featured = false }: { place: PlaceRecommendation; card: TarotCard; featured?: boolean }) {
+function DrinkResultPanel({ result, label }: { result: DrinkRecommendResponse; label: string }) {
+  return (
+    <article className="drink-result">
+      <div className="drink-result-card">
+        <CardFront card={result.card} compact />
+      </div>
+      <div>
+        <p className="eyebrow">{label}</p>
+        <h3>{result.bar.name}</h3>
+        <strong className="drink-name">{result.drink.name}</strong>
+        <p>{result.drink.note}</p>
+        <p className="order-hint">{result.drink.orderHint}</p>
+        <div className="drink-result-actions">
+          <span>{result.source === "google" ? "Google Places 已匹配" : "按店名生成"}</span>
+          {result.bar.mapsUri ? (
+            <a href={result.bar.mapsUri} target="_blank" rel="noreferrer">
+              <MapPin size={15} />
+              地图确认
+            </a>
+          ) : null}
+        </div>
+        {result.notice ? <small>{result.notice}</small> : null}
+      </div>
+    </article>
+  );
+}
+
+function PlacePanel({
+  place,
+  card,
+  featured = false,
+  onDrawDrink,
+  drinkState = "idle"
+}: {
+  place: PlaceRecommendation;
+  card: TarotCard;
+  featured?: boolean;
+  onDrawDrink?: () => void;
+  drinkState?: DrawState;
+}) {
   const reading = useMemo(() => buildBarReading(card, place), [card, place]);
 
   return (
@@ -592,6 +771,12 @@ function PlacePanel({ place, card, featured = false }: { place: PlaceRecommendat
       <p className="rating-insight">{reading.ratingInsight}</p>
 
       <div className="place-actions">
+        {onDrawDrink ? (
+          <button className="link-button" type="button" onClick={onDrawDrink} disabled={drinkState === "drawing"}>
+            {drinkState === "drawing" ? <RefreshCw className="spin" size={17} /> : <Wine size={17} />}
+            {drinkState === "drawing" ? "正在洗牌" : "抽一杯酒"}
+          </button>
+        ) : null}
         {place.mapsUri ? (
           <a className="link-button" href={place.mapsUri} target="_blank" rel="noreferrer">
             <MapPin size={17} />
