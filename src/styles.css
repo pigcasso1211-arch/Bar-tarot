@@ -359,7 +359,11 @@ a {
 .art-tower,
 .art-flag,
 .art-wreath,
-.art-pedestal {
+.art-pedestal,
+.art-flame,
+.art-cup-large,
+.art-sword,
+.art-pentacle {
   fill: var(--card-b);
   stroke: rgba(45, 35, 22, 0.72);
   stroke-linejoin: round;
@@ -393,6 +397,33 @@ a {
   stroke-width: 4;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.art-wand {
+  fill: none;
+  stroke: rgba(45, 35, 22, 0.82);
+  stroke-linecap: round;
+  stroke-width: 7;
+}
+
+.art-flame {
+  filter: drop-shadow(0 0 10px rgba(230, 199, 111, 0.42));
+}
+
+.art-flame.small {
+  transform-origin: center;
+}
+
+.art-cup-large {
+  fill: color-mix(in srgb, var(--card-b), #f8f4e8 22%);
+}
+
+.art-sword {
+  fill: color-mix(in srgb, var(--card-a), #f8f4e8 45%);
+}
+
+.art-pentacle {
+  fill: color-mix(in srgb, var(--card-b), #14532d 20%);
 }
 
 .art-chain,

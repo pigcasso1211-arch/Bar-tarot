@@ -79,7 +79,7 @@ function App() {
           <p className="eyebrow">Singapore Night Tarot</p>
           <h1>今晚抽一间酒吧</h1>
           <p className="lede">让塔罗牌先决定氛围，再从新加坡的夜色里挑一家适合今晚的 bar。</p>
-          {cards.length > 0 ? <p className="deck-count">{cards.length} 张大阿尔卡纳 · 每晚不重样</p> : null}
+          {cards.length > 0 ? <p className="deck-count">{cards.length} 张完整塔罗牌 · 每晚不重样</p> : null}
         </div>
 
         <div className={`tarot-stage ${state === "drawing" ? "is-drawing" : ""} ${result ? "is-revealed" : ""}`}>
@@ -199,6 +199,11 @@ function TarotIllustration({ cardId }: { cardId?: string }) {
 function TarotScene({ cardId, uid }: { cardId?: string; uid: string }) {
   const halo = `url(#halo-${uid})`;
   const robe = `url(#robe-${uid})`;
+  const minorSuit = getMinorSuit(cardId);
+
+  if (minorSuit) {
+    return <MinorArcanaScene suit={minorSuit} />;
+  }
 
   switch (cardId) {
     case "the-moon":
@@ -420,6 +425,58 @@ function TarotScene({ cardId, uid }: { cardId?: string; uid: string }) {
           <path className="art-line" d="M102 94 L132 74 M63 118 L40 104 M110 158 L134 178" />
           <path className="art-cliff" d="M80 182 L128 146 L150 190 Z" />
           <circle className="art-dot" cx="46" cy="102" r="6" />
+        </>
+      );
+  }
+}
+
+function getMinorSuit(cardId?: string) {
+  if (!cardId) return undefined;
+  if (cardId.endsWith("-of-wands")) return "wands";
+  if (cardId.endsWith("-of-cups")) return "cups";
+  if (cardId.endsWith("-of-swords")) return "swords";
+  if (cardId.endsWith("-of-pentacles")) return "pentacles";
+  return undefined;
+}
+
+function MinorArcanaScene({ suit }: { suit: "wands" | "cups" | "swords" | "pentacles" }) {
+  switch (suit) {
+    case "wands":
+      return (
+        <>
+          <path className="art-wand" d="M90 42 V166" />
+          <path className="art-flame" d="M90 36 C76 56 84 70 90 78 C96 68 108 56 90 36 Z" />
+          <path className="art-flame small" d="M60 82 C50 96 56 108 62 114 C66 104 74 94 60 82 Z" />
+          <path className="art-flame small" d="M120 82 C106 94 114 106 118 114 C126 106 130 94 120 82 Z" />
+          <path className="art-line" d="M56 166 H124" />
+        </>
+      );
+    case "cups":
+      return (
+        <>
+          <path className="art-cup-large" d="M56 60 H124 C122 104 108 126 90 126 C72 126 58 104 56 60 Z" />
+          <path className="art-water" d="M62 82 C74 74 84 92 96 82 C108 74 116 88 124 80" />
+          <path className="art-line" d="M90 126 V164 M66 164 H114" />
+          <circle className="art-dot" cx="62" cy="44" r="5" />
+          <circle className="art-dot" cx="118" cy="44" r="5" />
+        </>
+      );
+    case "swords":
+      return (
+        <>
+          <path className="art-sword" d="M90 36 L102 132 H78 Z" />
+          <path className="art-line" d="M58 132 H122 M78 154 H102 M90 132 V176" />
+          <path className="art-star small" d="M45 60 L48 68 L56 68 L50 73 L52 82 L45 76 L38 82 L40 73 L34 68 L42 68 Z" />
+          <path className="art-star small" d="M135 60 L138 68 L146 68 L140 73 L142 82 L135 76 L128 82 L130 73 L124 68 L132 68 Z" />
+        </>
+      );
+    case "pentacles":
+      return (
+        <>
+          <circle className="art-pentacle" cx="90" cy="92" r="52" />
+          <path className="art-line" d="M90 44 L104 118 L52 74 H128 L76 118 Z" />
+          <path className="art-line" d="M58 164 H122" />
+          <circle className="art-dot" cx="90" cy="164" r="7" />
         </>
       );
   }
