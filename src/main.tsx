@@ -11,6 +11,8 @@ type DrawState = "idle" | "drawing" | "revealed" | "error";
 function App() {
   const [cards, setCards] = useState<TarotCard[]>([]);
   const [selectedCardId, setSelectedCardId] = useState<string>();
+  const [selectedDeckIndex, setSelectedDeckIndex] = useState<number>();
+  const [spreadSeed, setSpreadSeed] = useState(() => Math.random());
   const [result, setResult] = useState<RecommendResponse | null>(null);
   const [state, setState] = useState<DrawState>("idle");
   const [error, setError] = useState("");
@@ -34,7 +36,10 @@ function App() {
     return cards.find((card) => card.id === selectedCardId) ?? cards[0];
   }, [cards, result, selectedCardId]);
 
-  async function draw(cardId?: string) {
+  const spreadCards = useMemo(() => buildSpread(cards, selectedCardId, spreadSeed), [cards, selectedCardId, spreadSeed]);
+
+  async function draw(cardId?: string, deckIndex?: number) {
+    setSelectedDeckIndex(deckIndex);
     setState("drawing");
     setError("");
     setResult(null);
@@ -59,8 +64,11 @@ function App() {
   }
 
   function redraw() {
+    const nextSeed = Math.random();
+    setSpreadSeed(nextSeed);
     const cardId = cards[Math.floor(Math.random() * Math.max(cards.length, 1))]?.id;
-    void draw(cardId);
+    const deckIndex = Math.floor(Math.random() * Math.max(spreadCards.length, 1));
+    void draw(cardId, deckIndex);
   }
 
   function chooseAlternative(place: PlaceRecommendation) {
@@ -82,38 +90,38 @@ function App() {
           {cards.length > 0 ? <p className="deck-count">{cards.length} 张完整塔罗牌 · 每晚不重样</p> : null}
         </div>
 
-        <div className={`tarot-stage ${state === "drawing" ? "is-drawing" : ""} ${result ? "is-revealed" : ""}`}>
-          <button className="card-button" type="button" onClick={() => redraw()} disabled={state === "drawing"}>
-            <div className="card-face card-back">
-              <div className="card-back-frame" aria-hidden="true">
-                <span className="card-back-corner tl" />
-                <span className="card-back-corner tr" />
-                <span className="card-back-corner bl" />
-                <span className="card-back-corner br" />
-                <span className="card-back-emblem">
-                  <Sparkles size={28} />
-                </span>
+        <div className="spread-panel">
+          <div className="spread-heading">
+            <p>从牌阵里选一张</p>
+            <span>{result ? result.card.name : "让今晚自己靠近你"}</span>
+          </div>
+          <div className={`tarot-spread ${state === "drawing" ? "is-drawing" : ""} ${result ? "has-selection" : ""}`}>
+            {spreadCards.map((card, index) => {
+              const isSelected = selectedDeckIndex === index;
+              return (
+                <button
+                  className={`spread-card ${isSelected ? "is-selected" : ""}`}
+                  type="button"
+                  key={`${card?.id ?? "empty"}-${index}`}
+                  onClick={() => draw(card?.id, index)}
+                  disabled={state === "drawing"}
+                  aria-label={card ? `抽第 ${index + 1} 张牌` : "等待牌组"}
+                >
+                  <div className="spread-card-inner">
+                    <CardBack compact label={isSelected && state === "drawing" ? "Draw" : ""} />
+                    {isSelected && result?.card ? <CardFront card={result.card} compact /> : null}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+          {currentCard ? (
+            <div className="selected-card-preview">
+              <div className={`preview-card ${result ? "is-visible" : ""}`}>
+                <CardFront card={result?.card ?? currentCard} />
               </div>
-              <span className="card-back-label">Draw</span>
             </div>
-            <div
-              className="card-face card-front"
-              style={
-                currentCard
-                  ? ({ "--card-a": currentCard.palette[0], "--card-b": currentCard.palette[1] } as React.CSSProperties)
-                  : undefined
-              }
-            >
-              <span className="card-corner tl" aria-hidden="true" />
-              <span className="card-corner tr" aria-hidden="true" />
-              <span className="card-corner bl" aria-hidden="true" />
-              <span className="card-corner br" aria-hidden="true" />
-              <small>{currentCard?.arcana ?? "?"}</small>
-              <TarotIllustration cardId={currentCard?.id} />
-              <strong>{currentCard?.name ?? "Tarot"}</strong>
-              <span>{currentCard?.mood ?? "night"}</span>
-            </div>
-          </button>
+          ) : null}
         </div>
 
         <div className="actions">
@@ -166,6 +174,67 @@ function App() {
         </section>
       )}
     </main>
+  );
+}
+
+function buildSpread(cards: TarotCard[], selectedCardId: string | undefined, seed: number) {
+  const selected = cards.find((card) => card.id === selectedCardId);
+  const pool = cards.filter((card) => card.id !== selectedCardId);
+  const spread = seededShuffle(pool, seed).slice(0, 12);
+
+  if (selected) {
+    const selectedIndex = Math.min(5, spread.length);
+    spread.splice(selectedIndex, 0, selected);
+  }
+
+  return spread.slice(0, 12);
+}
+
+function seededShuffle(cards: TarotCard[], seed: number) {
+  const shuffled = [...cards];
+  let state = Math.max(1, Math.floor(seed * 2147483647));
+
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    state = (state * 48271) % 2147483647;
+    const swapIndex = state % (index + 1);
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+  }
+
+  return shuffled;
+}
+
+function CardBack({ compact = false, label = "Draw" }: { compact?: boolean; label?: string }) {
+  return (
+    <div className={compact ? "card-face card-back compact" : "card-face card-back"}>
+      <div className="card-back-frame" aria-hidden="true">
+        <span className="card-back-corner tl" />
+        <span className="card-back-corner tr" />
+        <span className="card-back-corner bl" />
+        <span className="card-back-corner br" />
+        <span className="card-back-emblem">
+          <Sparkles size={compact ? 18 : 28} />
+        </span>
+      </div>
+      {label ? <span className="card-back-label">{label}</span> : null}
+    </div>
+  );
+}
+
+function CardFront({ card, compact = false }: { card: TarotCard; compact?: boolean }) {
+  return (
+    <div
+      className={compact ? "card-face card-front compact" : "card-face card-front"}
+      style={{ "--card-a": card.palette[0], "--card-b": card.palette[1] } as React.CSSProperties}
+    >
+      <span className="card-corner tl" aria-hidden="true" />
+      <span className="card-corner tr" aria-hidden="true" />
+      <span className="card-corner bl" aria-hidden="true" />
+      <span className="card-corner br" aria-hidden="true" />
+      <small>{card.arcana}</small>
+      <TarotIllustration cardId={card.id} />
+      <strong>{card.name}</strong>
+      <span>{card.mood}</span>
+    </div>
   );
 }
 
