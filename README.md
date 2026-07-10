@@ -30,7 +30,7 @@ NODE_ENV=production
 `render.yaml` 已配置：
 
 ```bash
-Build Command: corepack enable && pnpm install --frozen-lockfile && pnpm build
+Build Command: pnpm install --frozen-lockfile && pnpm build
 Start Command: pnpm start
 Health Check Path: /api/health
 ```
