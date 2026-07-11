@@ -630,6 +630,32 @@ a {
   stroke-width: 2;
 }
 
+.art-neon-glow {
+  mix-blend-mode: screen;
+  opacity: 0.78;
+}
+
+.art-orbit {
+  fill: none;
+  stroke: color-mix(in srgb, var(--card-b), #ffffff 22%);
+  stroke-width: 1.4;
+  stroke-dasharray: 7 6;
+  opacity: 0.62;
+}
+
+.art-orbit.thin {
+  stroke-width: 0.9;
+  stroke-dasharray: 3 5;
+  opacity: 0.42;
+}
+
+.art-orbit.bright {
+  stroke-width: 2;
+  stroke-dasharray: none;
+  opacity: 0.72;
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--card-b), transparent 38%));
+}
+
 .art-ground,
 .art-cliff,
 .art-table {
@@ -661,11 +687,26 @@ a {
 .art-flame,
 .art-cup-large,
 .art-sword,
-.art-pentacle {
+.art-pentacle,
+.art-minor-sigil,
+.art-dream-cloud {
   fill: var(--card-b);
   stroke: rgba(45, 35, 22, 0.72);
   stroke-linejoin: round;
   stroke-width: 2;
+}
+
+.art-minor-sigil {
+  fill: color-mix(in srgb, var(--card-a), transparent 72%);
+  stroke: color-mix(in srgb, var(--card-b), #ffffff 18%);
+  stroke-width: 2.5;
+  filter: drop-shadow(0 0 12px color-mix(in srgb, var(--card-b), transparent 34%));
+}
+
+.art-dream-cloud {
+  fill: color-mix(in srgb, var(--card-b), #ffffff 26%);
+  opacity: 0.24;
+  stroke-width: 1.5;
 }
 
 .art-star.small {
@@ -704,6 +745,12 @@ a {
   stroke-width: 7;
 }
 
+.art-wand.pip {
+  stroke: color-mix(in srgb, var(--card-a), #2d2316 35%);
+  stroke-width: 5;
+  filter: drop-shadow(0 0 7px color-mix(in srgb, var(--card-b), transparent 42%));
+}
+
 .art-flame {
   filter: drop-shadow(0 0 10px rgba(230, 199, 111, 0.42));
 }
@@ -712,16 +759,39 @@ a {
   transform-origin: center;
 }
 
+.art-flame.pip {
+  stroke-width: 1.5;
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--card-b), transparent 18%));
+}
+
 .art-cup-large {
   fill: color-mix(in srgb, var(--card-b), #f8f4e8 22%);
+}
+
+.art-cup-large.pip {
+  fill: color-mix(in srgb, var(--card-b), #ffffff 28%);
+  stroke-width: 1.6;
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--card-b), transparent 35%));
 }
 
 .art-sword {
   fill: color-mix(in srgb, var(--card-a), #f8f4e8 45%);
 }
 
+.art-sword.pip {
+  fill: color-mix(in srgb, var(--card-a), #ffffff 62%);
+  stroke-width: 1.6;
+  filter: drop-shadow(0 0 8px rgba(147, 197, 253, 0.46));
+}
+
 .art-pentacle {
   fill: color-mix(in srgb, var(--card-b), #14532d 20%);
+}
+
+.art-pentacle.pip {
+  fill: color-mix(in srgb, var(--card-b), #ffffff 12%);
+  stroke-width: 1.6;
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--card-b), transparent 36%));
 }
 
 .art-chain,
@@ -756,6 +826,16 @@ a {
   stroke-width: 2;
 }
 
+.art-body.court {
+  fill: color-mix(in srgb, var(--card-a), #f8f4e8 35%);
+  stroke: color-mix(in srgb, var(--card-b), #2d2316 34%);
+}
+
+.art-crown.neon {
+  fill: color-mix(in srgb, var(--card-b), #ffffff 22%);
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--card-b), transparent 22%));
+}
+
 .art-line,
 .art-border-line,
 .art-water,
@@ -778,6 +858,25 @@ a {
 
 .art-line.thin {
   stroke-width: 2;
+}
+
+.art-line.bright,
+.art-line.pip-thin {
+  stroke: color-mix(in srgb, var(--card-b), #ffffff 14%);
+}
+
+.art-line.pip-thin {
+  stroke-width: 2;
+}
+
+.art-water.pip {
+  stroke-width: 2;
+  filter: drop-shadow(0 0 7px rgba(76, 201, 240, 0.42));
+}
+
+.art-dot.glow {
+  fill: #fff6c7;
+  filter: drop-shadow(0 0 9px color-mix(in srgb, var(--card-b), transparent 12%));
 }
 
 .actions {

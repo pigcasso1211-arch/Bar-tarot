@@ -471,9 +471,17 @@ function TarotIllustration({ cardId }: { cardId?: string }) {
           <stop offset="0%" stopColor="color-mix(in srgb, var(--card-a), #fff 22%)" />
           <stop offset="100%" stopColor="color-mix(in srgb, var(--card-b), #fff 8%)" />
         </linearGradient>
+        <radialGradient id={`neon-${uid}`} cx="50%" cy="42%" r="56%">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.56" />
+          <stop offset="48%" stopColor="var(--card-b)" stopOpacity="0.2" />
+          <stop offset="100%" stopColor="var(--card-a)" stopOpacity="0.08" />
+        </radialGradient>
       </defs>
       <rect className="art-frame-outer" x="10" y="10" width="160" height="200" rx="18" />
       <rect className="art-sky" x="18" y="18" width="144" height="184" rx="14" fill={`url(#sky-${uid})`} />
+      <circle className="art-neon-glow" cx="90" cy="92" r="72" fill={`url(#neon-${uid})`} />
+      <path className="art-orbit" d="M34 96 C54 42 126 42 146 96 C126 150 54 150 34 96 Z" />
+      <path className="art-orbit thin" d="M48 100 C64 66 116 66 132 100 C112 132 68 132 48 100 Z" />
       <TarotScene cardId={cardId} uid={uid} />
       <path className="art-ground" d="M28 176 C58 164 80 190 112 176 C138 164 148 176 158 184 L158 196 L28 196 Z" />
       <rect className="art-frame-inner" x="22" y="22" width="136" height="176" rx="12" />
@@ -487,7 +495,7 @@ function TarotScene({ cardId, uid }: { cardId?: string; uid: string }) {
   const minorSuit = getMinorSuit(cardId);
 
   if (minorSuit) {
-    return <MinorArcanaScene suit={minorSuit} />;
+    return <MinorArcanaScene cardId={cardId} suit={minorSuit} />;
   }
 
   switch (cardId) {
@@ -715,7 +723,24 @@ function TarotScene({ cardId, uid }: { cardId?: string; uid: string }) {
   }
 }
 
-function getMinorSuit(cardId?: string) {
+type MinorSuitName = "wands" | "cups" | "swords" | "pentacles";
+type MinorRankName =
+  | "ace"
+  | "two"
+  | "three"
+  | "four"
+  | "five"
+  | "six"
+  | "seven"
+  | "eight"
+  | "nine"
+  | "ten"
+  | "page"
+  | "knight"
+  | "queen"
+  | "king";
+
+function getMinorSuit(cardId?: string): MinorSuitName | undefined {
   if (!cardId) return undefined;
   if (cardId.endsWith("-of-wands")) return "wands";
   if (cardId.endsWith("-of-cups")) return "cups";
@@ -724,47 +749,201 @@ function getMinorSuit(cardId?: string) {
   return undefined;
 }
 
-function MinorArcanaScene({ suit }: { suit: "wands" | "cups" | "swords" | "pentacles" }) {
+function getMinorRank(cardId?: string): MinorRankName | undefined {
+  const rank = cardId?.split("-of-")[0];
+  if (
+    rank === "ace" ||
+    rank === "two" ||
+    rank === "three" ||
+    rank === "four" ||
+    rank === "five" ||
+    rank === "six" ||
+    rank === "seven" ||
+    rank === "eight" ||
+    rank === "nine" ||
+    rank === "ten" ||
+    rank === "page" ||
+    rank === "knight" ||
+    rank === "queen" ||
+    rank === "king"
+  ) {
+    return rank;
+  }
+  return undefined;
+}
+
+const rankCounts: Partial<Record<MinorRankName, number>> = {
+  ace: 1,
+  two: 2,
+  three: 3,
+  four: 4,
+  five: 5,
+  six: 6,
+  seven: 7,
+  eight: 8,
+  nine: 9,
+  ten: 10
+};
+
+const pipLayouts: Record<number, Array<[number, number]>> = {
+  1: [[90, 96]],
+  2: [
+    [74, 72],
+    [106, 124]
+  ],
+  3: [
+    [90, 58],
+    [66, 128],
+    [114, 128]
+  ],
+  4: [
+    [62, 70],
+    [118, 70],
+    [62, 132],
+    [118, 132]
+  ],
+  5: [
+    [62, 66],
+    [118, 66],
+    [90, 100],
+    [62, 136],
+    [118, 136]
+  ],
+  6: [
+    [60, 60],
+    [90, 60],
+    [120, 60],
+    [60, 136],
+    [90, 136],
+    [120, 136]
+  ],
+  7: [
+    [90, 46],
+    [58, 80],
+    [90, 82],
+    [122, 80],
+    [58, 136],
+    [90, 140],
+    [122, 136]
+  ],
+  8: [
+    [58, 52],
+    [90, 52],
+    [122, 52],
+    [72, 96],
+    [108, 96],
+    [58, 142],
+    [90, 142],
+    [122, 142]
+  ],
+  9: [
+    [58, 50],
+    [90, 50],
+    [122, 50],
+    [58, 96],
+    [90, 96],
+    [122, 96],
+    [58, 142],
+    [90, 142],
+    [122, 142]
+  ],
+  10: [
+    [54, 48],
+    [82, 48],
+    [110, 48],
+    [136, 48],
+    [68, 92],
+    [112, 92],
+    [54, 140],
+    [82, 140],
+    [110, 140],
+    [136, 140]
+  ]
+};
+
+function MinorArcanaScene({ cardId, suit }: { cardId?: string; suit: MinorSuitName }) {
+  const rank = getMinorRank(cardId);
+  const count = rank ? rankCounts[rank] : undefined;
+
+  if (count) {
+    const positions = pipLayouts[count];
+    return (
+      <>
+        <circle className="art-minor-sigil" cx="90" cy="96" r="54" />
+        <path className="art-orbit bright" d="M42 96 C60 58 120 58 138 96 C120 134 60 134 42 96 Z" />
+        {rank === "seven" ? (
+          <>
+            <path className="art-dream-cloud" d="M42 56 C60 34 82 46 90 64 C102 42 128 40 142 62 C128 52 110 62 108 82 C92 68 72 70 62 90 C58 72 50 62 42 56 Z" />
+            <circle className="art-dot glow" cx="90" cy="38" r="4" />
+            <circle className="art-dot glow" cx="136" cy="106" r="3" />
+          </>
+        ) : null}
+        {positions.map(([x, y], index) => (
+          <SuitPip key={`${suit}-${rank}-${index}`} suit={suit} x={x} y={y} small={count > 7} />
+        ))}
+      </>
+    );
+  }
+
+  return <CourtScene rank={rank ?? "page"} suit={suit} />;
+}
+
+function SuitPip({ suit, x, y, small = false }: { suit: MinorSuitName; x: number; y: number; small?: boolean }) {
+  const scale = small ? 0.78 : 0.92;
   switch (suit) {
     case "wands":
       return (
-        <>
-          <path className="art-wand" d="M90 42 V166" />
-          <path className="art-flame" d="M90 36 C76 56 84 70 90 78 C96 68 108 56 90 36 Z" />
-          <path className="art-flame small" d="M60 82 C50 96 56 108 62 114 C66 104 74 94 60 82 Z" />
-          <path className="art-flame small" d="M120 82 C106 94 114 106 118 114 C126 106 130 94 120 82 Z" />
-          <path className="art-line" d="M56 166 H124" />
-        </>
+        <g transform={`translate(${x} ${y}) scale(${scale})`}>
+          <path className="art-wand pip" d="M0 -20 V18" />
+          <path className="art-flame pip" d="M0 -28 C-9 -14 -4 -7 0 -2 C5 -10 10 -18 0 -28 Z" />
+        </g>
       );
     case "cups":
       return (
-        <>
-          <path className="art-cup-large" d="M56 60 H124 C122 104 108 126 90 126 C72 126 58 104 56 60 Z" />
-          <path className="art-water" d="M62 82 C74 74 84 92 96 82 C108 74 116 88 124 80" />
-          <path className="art-line" d="M90 126 V164 M66 164 H114" />
-          <circle className="art-dot" cx="62" cy="44" r="5" />
-          <circle className="art-dot" cx="118" cy="44" r="5" />
-        </>
+        <g transform={`translate(${x} ${y}) scale(${scale})`}>
+          <path className="art-cup-large pip" d="M-16 -18 H16 C15 4 9 14 0 14 C-9 14 -15 4 -16 -18 Z" />
+          <path className="art-water pip" d="M-12 -7 C-6 -12 -1 -4 5 -8 C10 -12 14 -5 17 -9" />
+          <path className="art-line pip-thin" d="M0 14 V28 M-12 28 H12" />
+        </g>
       );
     case "swords":
       return (
-        <>
-          <path className="art-sword" d="M90 36 L102 132 H78 Z" />
-          <path className="art-line" d="M58 132 H122 M78 154 H102 M90 132 V176" />
-          <path className="art-star small" d="M45 60 L48 68 L56 68 L50 73 L52 82 L45 76 L38 82 L40 73 L34 68 L42 68 Z" />
-          <path className="art-star small" d="M135 60 L138 68 L146 68 L140 73 L142 82 L135 76 L128 82 L130 73 L124 68 L132 68 Z" />
-        </>
+        <g transform={`translate(${x} ${y}) scale(${scale})`}>
+          <path className="art-sword pip" d="M0 -28 L7 8 H-7 Z" />
+          <path className="art-line pip-thin" d="M-14 8 H14 M-6 20 H6 M0 8 V30" />
+        </g>
       );
     case "pentacles":
       return (
-        <>
-          <circle className="art-pentacle" cx="90" cy="92" r="52" />
-          <path className="art-line" d="M90 44 L104 118 L52 74 H128 L76 118 Z" />
-          <path className="art-line" d="M58 164 H122" />
-          <circle className="art-dot" cx="90" cy="164" r="7" />
-        </>
+        <g transform={`translate(${x} ${y}) scale(${scale})`}>
+          <circle className="art-pentacle pip" cx="0" cy="0" r="18" />
+          <path className="art-line pip-thin" d="M0 -15 L5 7 L-14 -6 H14 L-5 7 Z" />
+        </g>
       );
   }
+}
+
+function CourtScene({ rank, suit }: { rank: MinorRankName; suit: MinorSuitName }) {
+  const crown =
+    rank === "king"
+      ? "M58 66 L70 42 L90 64 L110 42 L122 66 Z"
+      : rank === "queen"
+        ? "M62 68 L76 48 L90 64 L104 48 L118 68 Z"
+        : rank === "knight"
+          ? "M64 72 L90 46 L116 72 Z"
+          : "M72 70 L90 52 L108 70 Z";
+
+  return (
+    <>
+      <circle className="art-minor-sigil" cx="90" cy="96" r="56" />
+      <path className="art-crown neon" d={crown} />
+      <circle className="art-face" cx="90" cy="88" r="14" />
+      <path className="art-body court" d="M58 170 C62 118 118 118 122 170 Z" />
+      <SuitPip suit={suit} x={90} y={132} />
+      {rank === "knight" ? <path className="art-line bright" d="M52 154 C74 136 104 136 130 156" /> : null}
+      {rank === "page" ? <circle className="art-dot glow" cx="128" cy="64" r="5" /> : null}
+    </>
+  );
 }
 
 function DrinkResultPanel({ result, label }: { result: DrinkRecommendResponse; label: string }) {
