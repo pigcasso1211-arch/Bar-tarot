@@ -30,6 +30,7 @@ function App() {
   const spreadRef = useRef<HTMLDivElement>(null);
   const drinkSpreadRef = useRef<HTMLDivElement>(null);
   const drinkOracleRef = useRef<HTMLElement>(null);
+  const drinkDrawAreaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetch("/api/tarot-cards")
@@ -139,8 +140,15 @@ function App() {
     setSelectedBarSuggestion(null);
   }
 
-  function focusDrinkOracle() {
-    drinkOracleRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  function focusDrinkOracle(target: "section" | "cards" = "section") {
+    const element = target === "cards" ? drinkDrawAreaRef.current ?? drinkOracleRef.current : drinkOracleRef.current;
+    element?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function focusDrinkCardsSoon() {
+    focusDrinkOracle("section");
+    window.requestAnimationFrame(() => focusDrinkOracle("cards"));
+    window.setTimeout(() => focusDrinkOracle("cards"), 180);
   }
 
   function chooseBarSuggestion(place: PlaceRecommendation) {
@@ -171,10 +179,11 @@ function App() {
     const barName = barNameInput.trim();
     if (!barName) {
       setDrinkError("先输入一家 bar 的名字，或者先抽出一家 bar。");
+      focusDrinkOracle();
       return;
     }
 
-    focusDrinkOracle();
+    focusDrinkCardsSoon();
 
     const nextSeed = deckIndexInput === undefined ? Math.random() : drinkSpreadSeed;
     const nextSpread = deckIndexInput === undefined ? buildSpread(cards, undefined, nextSeed) : drinkSpreadCards;
@@ -352,7 +361,7 @@ function App() {
           </div>
         </form>
 
-        <div className="drink-spread-shell">
+        <div className="drink-spread-shell" ref={drinkDrawAreaRef}>
           <div className="spread-heading">
             <p>滑动牌面，抽一杯</p>
             <span>{drinkResult ? drinkResult.card.name : activeDrinkBarName || "先输入或选定一家 bar"}</span>
