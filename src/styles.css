@@ -451,9 +451,9 @@ a {
   --card-a: #273043;
   --card-b: #e6c76f;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  grid-template-rows: 24px minmax(0, 1fr) minmax(42px, auto) 16px;
   place-items: center;
-  gap: 8px;
+  gap: 6px;
   padding: 22px 20px 18px;
   color: #2d2316;
   background:
@@ -464,7 +464,8 @@ a {
 }
 
 .card-front.compact {
-  gap: 5px;
+  grid-template-rows: 16px minmax(0, 1fr) minmax(24px, auto) 12px;
+  gap: 3px;
   padding: 13px 11px 10px;
 }
 
@@ -507,6 +508,7 @@ a {
   font-size: clamp(0.72rem, 1.7vw, 1rem);
   line-height: 1.05;
   overflow-wrap: anywhere;
+  padding: 3px 5px;
 }
 
 .card-front.compact span {
@@ -515,7 +517,9 @@ a {
 }
 
 .card-front.compact .tarot-art {
-  max-width: 100%;
+  max-width: 92%;
+  height: 100%;
+  max-height: 100%;
   filter: none;
 }
 
@@ -595,6 +599,12 @@ a {
   font-size: clamp(1.35rem, 4.5vw, 2rem);
   line-height: 1;
   text-transform: uppercase;
+  z-index: 2;
+  align-self: end;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, rgba(255, 250, 240, 0.54), rgba(244, 222, 174, 0.76), rgba(255, 250, 240, 0.54));
+  box-shadow: 0 8px 18px rgba(45, 35, 22, 0.12);
 }
 
 .card-front span {
@@ -603,13 +613,16 @@ a {
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
+  z-index: 2;
 }
 
 .tarot-art {
-  width: 100%;
-  max-width: 230px;
-  height: auto;
+  width: auto;
+  max-width: 96%;
+  height: 100%;
+  max-height: 100%;
   min-height: 0;
+  align-self: center;
   filter: drop-shadow(0 12px 16px rgba(45, 35, 22, 0.2));
 }
 
