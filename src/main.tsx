@@ -17,6 +17,8 @@ function App() {
   const [state, setState] = useState<DrawState>("idle");
   const [error, setError] = useState("");
   const [barQuery, setBarQuery] = useState("");
+  const [barSuggestions, setBarSuggestions] = useState<PlaceRecommendation[]>([]);
+  const [selectedBarSuggestion, setSelectedBarSuggestion] = useState<PlaceRecommendation | null>(null);
   const [drinkResult, setDrinkResult] = useState<DrinkRecommendResponse | null>(null);
   const [drinkState, setDrinkState] = useState<DrawState>("idle");
   const [drinkError, setDrinkError] = useState("");
@@ -27,6 +29,7 @@ function App() {
   const resultRef = useRef<HTMLElement>(null);
   const spreadRef = useRef<HTMLDivElement>(null);
   const drinkSpreadRef = useRef<HTMLDivElement>(null);
+  const drinkOracleRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     fetch("/api/tarot-cards")
@@ -34,6 +37,29 @@ function App() {
       .then((data) => setCards(data.cards ?? []))
       .catch(() => setCards([]));
   }, []);
+
+  useEffect(() => {
+    const query = barQuery.trim();
+    if (query.length < 2) {
+      setBarSuggestions([]);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      fetch(`/api/bar-suggestions?city=Singapore&query=${encodeURIComponent(query)}`, { signal: controller.signal })
+        .then((response) => response.json())
+        .then((data) => setBarSuggestions(data.places ?? []))
+        .catch(() => {
+          if (!controller.signal.aborted) setBarSuggestions([]);
+        });
+    }, 220);
+
+    return () => {
+      controller.abort();
+      window.clearTimeout(timer);
+    };
+  }, [barQuery]);
 
   const spreadCards = useMemo(() => buildSpread(cards, selectedCardId, spreadSeed), [cards, selectedCardId, spreadSeed]);
   const drinkSpreadCards = useMemo(
@@ -110,6 +136,18 @@ function App() {
     setSelectedDrinkCardId(undefined);
     setSelectedDrinkDeckIndex(undefined);
     setActiveDrinkBarName("");
+    setSelectedBarSuggestion(null);
+  }
+
+  function focusDrinkOracle() {
+    drinkOracleRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function chooseBarSuggestion(place: PlaceRecommendation) {
+    setSelectedBarSuggestion(place);
+    setBarQuery(place.name);
+    setActiveDrinkBarName(place.name);
+    setDrinkError("");
   }
 
   async function requestDrinkForBar(barName: string, cardId?: string) {
@@ -125,7 +163,8 @@ function App() {
 
   async function drawDrinkForTypedBar(event?: React.FormEvent<HTMLFormElement>) {
     event?.preventDefault();
-    await drawDrinkForBar(barQuery);
+    focusDrinkOracle();
+    await drawDrinkForBar(selectedBarSuggestion?.name || barQuery);
   }
 
   async function drawDrinkForBar(barNameInput: string, deckIndexInput?: number, cardIdInput?: string) {
@@ -134,6 +173,8 @@ function App() {
       setDrinkError("先输入一家 bar 的名字，或者先抽出一家 bar。");
       return;
     }
+
+    focusDrinkOracle();
 
     const nextSeed = deckIndexInput === undefined ? Math.random() : drinkSpreadSeed;
     const nextSpread = deckIndexInput === undefined ? buildSpread(cards, undefined, nextSeed) : drinkSpreadCards;
@@ -229,6 +270,7 @@ function App() {
             featured
             onDrawDrink={() => {
               setBarQuery(result.place.name);
+              setSelectedBarSuggestion(result.place);
               void drawDrinkForBar(result.place.name);
             }}
             drinkState={drinkState}
@@ -262,7 +304,7 @@ function App() {
         </section>
       )}
 
-      <section className="drink-oracle" aria-label="按酒吧抽酒单推荐">
+      <section className="drink-oracle" aria-label="按酒吧抽酒单推荐" ref={drinkOracleRef}>
         <div className="drink-oracle-copy">
           <p className="eyebrow">Menu Tarot</p>
           <h2>抽一杯酒</h2>
@@ -275,7 +317,10 @@ function App() {
             <input
               id="bar-search-input"
               value={barQuery}
-              onChange={(event) => setBarQuery(event.target.value)}
+              onChange={(event) => {
+                setBarQuery(event.target.value);
+                setSelectedBarSuggestion(null);
+              }}
               placeholder="例如 Atlas, Manhattan, Jigger & Pony"
             />
             <button type="submit" disabled={drinkState === "drawing"}>
@@ -284,6 +329,25 @@ function App() {
             </button>
           </div>
         </form>
+
+        {barSuggestions.length > 0 ? (
+          <div className="bar-suggestion-strip" aria-label="可能的酒吧">
+            {barSuggestions.map((place) => {
+              const isPicked = selectedBarSuggestion?.id === place.id || barQuery === place.name;
+              return (
+                <button
+                  className={isPicked ? "bar-suggestion is-picked" : "bar-suggestion"}
+                  type="button"
+                  key={place.id}
+                  onClick={() => chooseBarSuggestion(place)}
+                >
+                  <span>{place.name}</span>
+                  <small>{place.rating ? `${place.rating.toFixed(1)} ★` : place.statusLabel}</small>
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
 
         <div className="drink-spread-shell">
           <div className="spread-heading">

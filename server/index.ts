@@ -52,6 +52,28 @@ app.get("/api/tarot-cards", (_req, res) => {
   res.json({ cards: tarotCards });
 });
 
+app.get("/api/bar-suggestions", async (req, res) => {
+  const city = typeof req.query.city === "string" ? req.query.city : "Singapore";
+  const query = typeof req.query.query === "string" ? req.query.query.trim() : "";
+
+  if (query.length < 2) {
+    res.json({ places: [] });
+    return;
+  }
+
+  const card = pickTarotCard();
+
+  try {
+    const places = await findNamedBars(query, city, card);
+    res.json({
+      places: places.length > 0 ? places.slice(0, 8) : mockSuggestions(query, card),
+      source: places.length > 0 ? "google" : "mock"
+    });
+  } catch (error) {
+    res.json({ places: mockSuggestions(query, card), source: "mock" });
+  }
+});
+
 app.post("/api/recommend", async (req, res) => {
   const city = typeof req.body?.city === "string" ? req.body.city : "Singapore";
   const card = pickTarotCard(typeof req.body?.cardId === "string" ? req.body.cardId : undefined);
@@ -247,6 +269,16 @@ function mockBarForName(barName: string, city: string, card: TarotCard): PlaceRe
     source: "mock",
     moodTags: [card.mood]
   };
+}
+
+function mockSuggestions(query: string, card: TarotCard) {
+  const normalized = query.toLowerCase();
+  const matched = mockPlaces.filter((place) => place.name.toLowerCase().includes(normalized));
+  const fallback = mockPlaces.filter((place) => !matched.includes(place));
+  return [...matched, ...fallback].slice(0, 8).map((place) => ({
+    ...place,
+    moodTags: place.moodTags.length > 0 ? place.moodTags : [card.mood]
+  }));
 }
 
 function buildDrinkRecommendation(card: TarotCard, bar: PlaceRecommendation): DrinkRecommendation {

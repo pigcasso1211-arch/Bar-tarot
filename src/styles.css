@@ -1195,6 +1195,69 @@ a {
   opacity: 0.75;
 }
 
+.bar-suggestion-strip {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 10px;
+  min-width: 0;
+  margin-top: -8px;
+  padding: 4px 2px 10px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+}
+
+.bar-suggestion-strip::-webkit-scrollbar {
+  height: 7px;
+}
+
+.bar-suggestion-strip::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 999px;
+}
+
+.bar-suggestion-strip::-webkit-scrollbar-thumb {
+  background: rgba(230, 199, 111, 0.38);
+  border-radius: 999px;
+}
+
+.bar-suggestion {
+  flex: 0 0 clamp(172px, 26vw, 240px);
+  min-height: 58px;
+  display: grid;
+  gap: 5px;
+  align-content: center;
+  scroll-snap-align: start;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #f8f4e8;
+  text-align: left;
+  background: rgba(8, 10, 13, 0.48);
+  cursor: pointer;
+}
+
+.bar-suggestion span {
+  overflow-wrap: anywhere;
+  font-weight: 900;
+  line-height: 1.15;
+}
+
+.bar-suggestion small {
+  color: rgba(248, 244, 232, 0.58);
+  font-size: 0.76rem;
+}
+
+.bar-suggestion.is-picked {
+  color: #101317;
+  background: #e6c76f;
+  border-color: #e6c76f;
+}
+
+.bar-suggestion.is-picked small {
+  color: rgba(16, 19, 23, 0.66);
+}
+
 .drink-error {
   grid-column: 2;
   margin: -4px 0 0;
