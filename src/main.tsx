@@ -954,7 +954,7 @@ function DrinkResultPanel({ result, label }: { result: DrinkRecommendResponse; l
   return (
     <article className="drink-result">
       <div className="drink-result-card">
-        <CardFront card={result.card} compact staticFace />
+        <CocktailArt drinkName={result.drink.name} mood={result.card.mood} />
       </div>
       <div>
         <p className="eyebrow">{label}</p>
@@ -975,6 +975,191 @@ function DrinkResultPanel({ result, label }: { result: DrinkRecommendResponse; l
       </div>
     </article>
   );
+}
+
+function CocktailArt({ drinkName, mood }: { drinkName: string; mood: string }) {
+  const profile = getCocktailProfile(drinkName, mood);
+
+  return (
+    <svg className="cocktail-art" viewBox="0 0 180 260" role="img" aria-label={`${drinkName} illustration`}>
+      <defs>
+        <linearGradient id={`drink-${profile.id}`} x1="0%" x2="0%" y1="0%" y2="100%">
+          <stop offset="0%" stopColor={profile.liquidTop} />
+          <stop offset="100%" stopColor={profile.liquidBottom} />
+        </linearGradient>
+        <radialGradient id={`glow-${profile.id}`} cx="50%" cy="38%" r="58%">
+          <stop offset="0%" stopColor={profile.accent} stopOpacity="0.6" />
+          <stop offset="100%" stopColor={profile.accent} stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <rect className="cocktail-bg" x="0" y="0" width="180" height="260" rx="18" />
+      <circle className="cocktail-glow" cx="90" cy="98" r="72" fill={`url(#glow-${profile.id})`} />
+      <path className="cocktail-orbit" d="M30 104 C48 48 132 48 150 104 C132 160 48 160 30 104 Z" />
+      <CocktailGlass profile={profile} />
+      <text className="cocktail-label" x="90" y="228">
+        {profile.shortName}
+      </text>
+    </svg>
+  );
+}
+
+type CocktailProfile = {
+  id: string;
+  glass: "martini" | "highball" | "flute" | "rocks" | "tiki" | "warm";
+  shortName: string;
+  liquidTop: string;
+  liquidBottom: string;
+  accent: string;
+  garnish: "citrus" | "cherry" | "mint" | "olive" | "smoke" | "sparkle";
+};
+
+function getCocktailProfile(drinkName: string, mood: string): CocktailProfile {
+  const normalized = drinkName.toLowerCase();
+  const seed = hashString(`${drinkName}-${mood}`);
+  const palettes = [
+    ["#ffcf70", "#d9480f", "#ffd166"],
+    ["#c084fc", "#5b21b6", "#f0abfc"],
+    ["#67e8f9", "#0f766e", "#99f6e4"],
+    ["#fda4af", "#be123c", "#fecdd3"],
+    ["#fde68a", "#92400e", "#fef3c7"],
+    ["#93c5fd", "#1d4ed8", "#bfdbfe"]
+  ];
+  const [liquidTop, liquidBottom, accent] = palettes[seed % palettes.length];
+
+  const glass = normalized.includes("martini") || normalized.includes("vesper") || normalized.includes("daiquiri")
+    ? "martini"
+    : normalized.includes("champagne") || normalized.includes("kir") || normalized.includes("french")
+      ? "flute"
+      : normalized.includes("highball") || normalized.includes("spritz") || normalized.includes("sling") || normalized.includes("mule")
+        ? "highball"
+        : normalized.includes("toddy")
+          ? "warm"
+          : normalized.includes("paloma") || normalized.includes("margarita") || normalized.includes("dark")
+            ? "tiki"
+            : "rocks";
+
+  const garnish = normalized.includes("smok") || normalized.includes("penicillin")
+    ? "smoke"
+    : normalized.includes("martini") || normalized.includes("vesper")
+      ? "olive"
+      : normalized.includes("champagne") || normalized.includes("spritz") || normalized.includes("kir")
+        ? "sparkle"
+        : normalized.includes("mule") || normalized.includes("paloma")
+          ? "mint"
+          : normalized.includes("manhattan") || normalized.includes("negroni") || normalized.includes("old")
+            ? "cherry"
+            : "citrus";
+
+  return {
+    id: `${normalized.replace(/[^a-z0-9]+/g, "-")}-${seed}`,
+    glass,
+    shortName: drinkName.split(/\s+/).slice(0, 2).join(" "),
+    liquidTop,
+    liquidBottom,
+    accent,
+    garnish
+  };
+}
+
+function CocktailGlass({ profile }: { profile: CocktailProfile }) {
+  const liquid = `url(#drink-${profile.id})`;
+  const garnish = <CocktailGarnish profile={profile} />;
+
+  if (profile.glass === "martini") {
+    return (
+      <>
+        <path className="glass-shape" d="M45 62 H135 L104 116 H76 Z" />
+        <path className="drink-liquid" d="M56 74 H124 L101 108 H79 Z" fill={liquid} />
+        <path className="glass-stem" d="M90 116 V180 M64 180 H116" />
+        {garnish}
+      </>
+    );
+  }
+
+  if (profile.glass === "flute") {
+    return (
+      <>
+        <path className="glass-shape" d="M70 46 H110 C108 118 102 154 90 154 C78 154 72 118 70 46 Z" />
+        <path className="drink-liquid" d="M74 72 H106 C104 120 99 146 90 146 C81 146 76 120 74 72 Z" fill={liquid} />
+        <path className="glass-stem" d="M90 154 V186 M68 186 H112" />
+        {garnish}
+      </>
+    );
+  }
+
+  if (profile.glass === "highball") {
+    return (
+      <>
+        <path className="glass-shape" d="M62 48 H118 L110 184 H70 Z" />
+        <path className="drink-liquid" d="M67 88 H113 L107 178 H73 Z" fill={liquid} />
+        <path className="ice-line" d="M78 104 L96 118 M100 92 L112 108 M76 142 L94 156" />
+        {garnish}
+      </>
+    );
+  }
+
+  if (profile.glass === "warm") {
+    return (
+      <>
+        <path className="glass-shape" d="M58 90 H118 C118 144 106 170 88 170 H76 C64 170 58 142 58 90 Z" />
+        <path className="drink-liquid" d="M64 110 H112 C110 144 100 160 86 160 H78 C70 160 66 140 64 110 Z" fill={liquid} />
+        <path className="glass-stem" d="M118 112 C142 112 142 150 116 148" />
+        <path className="steam-line" d="M74 76 C66 62 82 58 74 44 M92 76 C84 62 100 58 92 44 M110 76 C102 62 118 58 110 44" />
+        {garnish}
+      </>
+    );
+  }
+
+  if (profile.glass === "tiki") {
+    return (
+      <>
+        <path className="glass-shape" d="M58 58 H122 L112 186 H68 Z" />
+        <path className="drink-liquid" d="M64 92 H116 L108 178 H72 Z" fill={liquid} />
+        <path className="tiki-line" d="M70 82 H110 M74 124 H106 M78 158 H102 M74 104 L106 146 M106 104 L74 146" />
+        {garnish}
+      </>
+    );
+  }
+
+  return (
+    <>
+      <path className="glass-shape" d="M58 78 H122 L114 176 H66 Z" />
+      <path className="drink-liquid" d="M64 112 H116 L110 168 H70 Z" fill={liquid} />
+      <path className="ice-line" d="M76 112 L96 132 M100 106 L116 122 M82 146 L102 160" />
+      {garnish}
+    </>
+  );
+}
+
+function CocktailGarnish({ profile }: { profile: CocktailProfile }) {
+  switch (profile.garnish) {
+    case "olive":
+      return <circle className="garnish-fill" cx="126" cy="68" r="9" />;
+    case "cherry":
+      return <circle className="garnish-fill" cx="120" cy="84" r="8" />;
+    case "mint":
+      return <path className="garnish-fill" d="M122 62 C140 48 148 68 130 80 C126 72 122 68 122 62 Z M112 58 C96 44 90 64 106 76 C110 68 112 64 112 58 Z" />;
+    case "smoke":
+      return <path className="steam-line" d="M66 58 C50 38 82 34 66 16 M94 58 C78 38 110 34 94 16 M122 58 C106 38 138 34 122 16" />;
+    case "sparkle":
+      return (
+        <>
+          <path className="sparkle-shape" d="M128 48 L132 58 L142 62 L132 66 L128 76 L124 66 L114 62 L124 58 Z" />
+          <circle className="garnish-fill" cx="56" cy="72" r="4" />
+        </>
+      );
+    case "citrus":
+    default:
+      return <path className="garnish-fill" d="M122 66 A18 18 0 0 1 146 84 L122 84 Z" />;
+  }
+}
+
+function hashString(value: string) {
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
+  }
+  return hash;
 }
 
 function PlacePanel({
