@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { ExternalLink, MapPin, RefreshCw, Search, Sparkles, Shuffle, Star, Wine } from "lucide-react";
+import { Check, ExternalLink, MapPin, RefreshCw, Search, Sparkles, Shuffle, Star, Wine } from "lucide-react";
 import type { DrinkRecommendResponse, RecommendResponse, PlaceRecommendation } from "../shared/places";
 import { buildBarReading } from "../shared/reading";
 import type { TarotCard } from "../shared/tarot";
@@ -314,40 +314,43 @@ function App() {
         <form className="bar-search" onSubmit={drawDrinkForTypedBar}>
           <label htmlFor="bar-search-input">Bar name</label>
           <div className="bar-search-row">
-            <input
-              id="bar-search-input"
-              value={barQuery}
-              onChange={(event) => {
-                setBarQuery(event.target.value);
-                setSelectedBarSuggestion(null);
-              }}
-              placeholder="例如 Atlas, Manhattan, Jigger & Pony"
-            />
+            <div className="bar-input-wrap">
+              <input
+                id="bar-search-input"
+                value={barQuery}
+                onChange={(event) => {
+                  setBarQuery(event.target.value);
+                  setSelectedBarSuggestion(null);
+                }}
+                placeholder="例如 Atlas, Manhattan, Jigger & Pony"
+                autoComplete="off"
+              />
+              {barSuggestions.length > 0 ? (
+                <div className="bar-autocomplete" aria-label="可能的酒吧">
+                  {barSuggestions.map((place) => {
+                    const isPicked = selectedBarSuggestion?.id === place.id || barQuery === place.name;
+                    return (
+                      <button
+                        className={isPicked ? "bar-suggestion is-picked" : "bar-suggestion"}
+                        type="button"
+                        key={place.id}
+                        onClick={() => chooseBarSuggestion(place)}
+                      >
+                        <span>{place.name}</span>
+                        <small>{place.rating ? `${place.rating.toFixed(1)} ★` : place.statusLabel}</small>
+                        {isPicked ? <Check size={16} /> : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
             <button type="submit" disabled={drinkState === "drawing"}>
               {drinkState === "drawing" ? <RefreshCw className="spin" size={17} /> : <Search size={17} />}
               {drinkState === "drawing" ? "正在洗牌" : "抽一杯酒"}
             </button>
           </div>
         </form>
-
-        {barSuggestions.length > 0 ? (
-          <div className="bar-suggestion-strip" aria-label="可能的酒吧">
-            {barSuggestions.map((place) => {
-              const isPicked = selectedBarSuggestion?.id === place.id || barQuery === place.name;
-              return (
-                <button
-                  className={isPicked ? "bar-suggestion is-picked" : "bar-suggestion"}
-                  type="button"
-                  key={place.id}
-                  onClick={() => chooseBarSuggestion(place)}
-                >
-                  <span>{place.name}</span>
-                  <small>{place.rating ? `${place.rating.toFixed(1)} ★` : place.statusLabel}</small>
-                </button>
-              );
-            })}
-          </div>
-        ) : null}
 
         <div className="drink-spread-shell">
           <div className="spread-heading">
