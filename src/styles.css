@@ -463,6 +463,11 @@ a {
   text-align: center;
 }
 
+.card-front.static {
+  transform: none;
+  backface-visibility: visible;
+}
+
 .card-front.compact {
   grid-template-rows: 16px minmax(0, 1fr) minmax(24px, auto) 12px;
   gap: 3px;
@@ -1417,6 +1422,9 @@ a {
   position: relative;
   width: 112px;
   aspect-ratio: 0.68;
+  border-radius: 14px;
+  overflow: hidden;
+  background: rgba(248, 244, 232, 0.08);
 }
 
 .drink-result h3 {

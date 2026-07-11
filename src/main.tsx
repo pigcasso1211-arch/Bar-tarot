@@ -436,10 +436,14 @@ function CardBack({ compact = false, label = "Draw" }: { compact?: boolean; labe
   );
 }
 
-function CardFront({ card, compact = false }: { card: TarotCard; compact?: boolean }) {
+function CardFront({ card, compact = false, staticFace = false }: { card: TarotCard; compact?: boolean; staticFace?: boolean }) {
+  const className = ["card-face", "card-front", compact ? "compact" : "", staticFace ? "static" : ""]
+    .filter(Boolean)
+    .join(" ");
+
   return (
     <div
-      className={compact ? "card-face card-front compact" : "card-face card-front"}
+      className={className}
       style={{ "--card-a": card.palette[0], "--card-b": card.palette[1] } as React.CSSProperties}
     >
       <span className="card-corner tl" aria-hidden="true" />
@@ -950,7 +954,7 @@ function DrinkResultPanel({ result, label }: { result: DrinkRecommendResponse; l
   return (
     <article className="drink-result">
       <div className="drink-result-card">
-        <CardFront card={result.card} compact />
+        <CardFront card={result.card} compact staticFace />
       </div>
       <div>
         <p className="eyebrow">{label}</p>
